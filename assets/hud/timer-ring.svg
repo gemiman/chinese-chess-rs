@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140" width="140" height="140"
+     role="img" aria-label="倒计时环底板">
+  <defs>
+    <radialGradient id="td" cx=".42" cy=".34" r=".78">
+      <stop offset="0" stop-color="#4a3a26"/>
+      <stop offset=".7" stop-color="#2a1f14"/>
+      <stop offset="1" stop-color="#170f08"/>
+    </radialGradient>
+    <filter id="tglow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+  </defs>
+  <circle cx="70" cy="70" r="54" fill="none" stroke="#ffcb4d" stroke-width="12"
+          opacity=".45" filter="url(#tglow)"/>
+  <circle cx="70" cy="70" r="54" fill="none" stroke="#140d07" stroke-width="11" opacity=".9"/>
+  <circle cx="70" cy="70" r="60" fill="none" stroke="#e8c079" stroke-width="1.2" opacity=".45"/>
+  <circle cx="70" cy="70" r="48" fill="none" stroke="#e8c079" stroke-width="1.2" opacity=".45"/>
+  <circle cx="70" cy="70" r="45" fill="url(#td)"/>
+  <circle cx="70" cy="70" r="45" fill="none" stroke="#ffd98a" stroke-width="1.2" opacity=".5"/>
+  <ellipse cx="58" cy="48" rx="26" ry="16" fill="#ffffff" opacity=".08"/>
+</svg>

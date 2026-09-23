@@ -451,8 +451,13 @@ PIECE_STROKE_W = 2.4
 PIECE_RING_W = 1.1
 PIECE_FONT_SIZE = 30
 
-PIECE_SHADOW_DY = 3.6
-PIECE_SHADOW_BLUR = 3.2
+# 侧壁下移量：圆盘整体下移这么多，露出底部一道深色侧边当「厚度」。
+# 上限是 32 + dy + 29 ≤ 64 —— 再大底部就会越过 viewBox 被裁掉。
+PIECE_SIDE_DY = 2.6
+# 投影参数。**投影画在 CSS 里**（见 build_piece 的说明），这几个值只用于生成
+# 设计令牌，不参与 SVG 绘制。
+PIECE_SHADOW_DY = 2.6
+PIECE_SHADOW_BLUR = 2.2
 PIECE_SHADOW_OPACITY = 0.42
 
 FACTIONS = {
@@ -481,11 +486,18 @@ PIECES = [
 def build_piece(name: str, char: str, faction: str) -> str:
     """暖金木牌：侧壁撑出厚度，顶面走径向渐变做出弧面高光，字是凹刻的。
 
-    渐变与滤镜的 id 带棋子名，保证 14 枚棋子内联到同一文档时不冲突。
+    # 为什么投影不画在这个 SVG 里
+
+    viewBox 是 64×64，而圆盘半径 29、还要向下让出厚度，底部本来就逼近 64；
+    再叠一层 `feDropShadow` 必然越过 viewBox，被 SVG 视口**裁成一条直边** ——
+    看起来像棋子被削平了一刀。
+
+    所以投影交给 CSS 的 `filter: drop-shadow()`（见 `frontend/src/styles.css`
+    的 `.piece img`）：那是对渲染结果施加的滤镜，可以画到元素外面，不受 viewBox 裁剪。
+    顺带的好处是投影参数不必烤进素材，不同场景可以各调各的。
     """
     p = FACTIONS[faction]
     dome = f"piece-dome-{name}"
-    shadow = f"piece-shadow-{name}"
     body = [
         "  <defs>",
         f'    <radialGradient id="{dome}" cx="34%" cy="26%" r="78%">',
@@ -493,15 +505,11 @@ def build_piece(name: str, char: str, faction: str) -> str:
         f'      <stop offset="78%" stop-color="{PIECE_TOP_LO}"/>',
         f'      <stop offset="100%" stop-color="{PIECE_TOP_EDGE}"/>',
         "    </radialGradient>",
-        f'    <filter id="{shadow}" x="-30%" y="-30%" width="160%" height="175%">',
-        f'      <feDropShadow dx="0" dy="{n(PIECE_SHADOW_DY)}" '
-        f'stdDeviation="{n(PIECE_SHADOW_BLUR)}" flood-color="#000000" '
-        f'flood-opacity="{n(PIECE_SHADOW_OPACITY)}"/>',
-        "    </filter>",
         "  </defs>",
-        # 1) 侧壁：圆牌整体下移一段，露出底部一道深色侧边，形成厚度
-        f'  <circle cx="32" cy="{n(32 + PIECE_SHADOW_DY)}" r="{n(PIECE_R)}" '
-        f'fill="{PIECE_SIDE}" filter="url(#{shadow})"/>',
+        # 1) 侧壁：圆牌整体下移一段，露出底部一道深色侧边，形成厚度。
+        #    下移量压到刚好不越过 viewBox：32 + 2.6 + 29 = 63.6 < 64。
+        f'  <circle cx="32" cy="{n(32 + PIECE_SIDE_DY)}" r="{n(PIECE_R)}" '
+        f'fill="{PIECE_SIDE}"/>',
         # 2) 顶面 + 外圈线
         f'  <circle cx="32" cy="32" r="{n(PIECE_R)}" fill="url(#{dome})" '
         f'stroke="{PIECE_RING}" stroke-width="{n(PIECE_STROKE_W)}"/>',

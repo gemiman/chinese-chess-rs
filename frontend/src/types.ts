@@ -68,6 +68,8 @@ export interface StateDto {
   history: PlayedMove[]
   halfmove_clock: number
   fullmove_number: number
+  /** 棋钟。`null` 表示这一局不限时。 */
+  clock: ClockDto | null
 }
 
 export interface MoveResponse {
@@ -213,3 +215,76 @@ export const MOVE_SPEEDS: { id: MoveSpeed; label: string }[] = [
   { id: 'normal', label: '正常' },
   { id: 'slow', label: '慢动作' },
 ]
+
+// ---------------------------------------------------------------- 限时
+
+/**
+ * 棋钟快照，来自 Rust。
+ *
+ * **Rust 是时间的权威**（对齐将来的服务端权威，见 ADR-014）；前端只在两次
+ * 响应之间做本地插值，把秒数平滑地显示出来，绝不自己判定超时。
+ */
+export interface ClockDto {
+  /** 局时（秒） */
+  base_secs: number
+  /** 步时（秒） */
+  step_secs: number
+  /** 读秒（秒） */
+  byoyomi_secs: number
+  /** 红方局时剩余（毫秒）；已进读秒则为 0 */
+  red_ms: number
+  black_ms: number
+  red_byoyomi: boolean
+  black_byoyomi: boolean
+  /** 当前走子方本步剩余（毫秒），可能为负 */
+  step_left_ms: number
+  /** 当前走子方本步的上限（毫秒），即超时判负的阈值。由 Rust 给出，
+      前端不自己推 min(步时, 局时剩余)，免得同一套规则两边各写一遍。 */
+  step_limit_ms: number
+}
+
+/** 限时配置（发给 Rust）。`null` 表示不限时。 */
+export interface TimeControlInput {
+  base_secs: number
+  step_secs: number
+  byoyomi_secs: number
+}
+
+export type TimePresetId = 'none' | 'blitz' | 'standard' | 'slow'
+
+/**
+ * 四档时间预设。
+ *
+ * 「读秒」取与步时相同的秒数 —— 这是最常见的配置：局时耗尽后，每步的
+ * 思考上限和之前一样，只是不再有总时间可花。
+ */
+export const TIME_PRESETS: {
+  id: TimePresetId
+  label: string
+  hint: string
+  control: TimeControlInput | null
+}[] = [
+  { id: 'none', label: '不限时', hint: '随便想，不催', control: null },
+  {
+    id: 'blitz',
+    label: '快棋',
+    hint: '局时 5 分 · 步时 20 秒',
+    control: { base_secs: 300, step_secs: 20, byoyomi_secs: 20 },
+  },
+  {
+    id: 'standard',
+    label: '标准',
+    hint: '局时 10 分 · 步时 30 秒',
+    control: { base_secs: 600, step_secs: 30, byoyomi_secs: 30 },
+  },
+  {
+    id: 'slow',
+    label: '慢棋',
+    hint: '局时 20 分 · 步时 60 秒',
+    control: { base_secs: 1200, step_secs: 60, byoyomi_secs: 60 },
+  },
+]
+
+export function timePresetOf(id: TimePresetId) {
+  return TIME_PRESETS.find((p) => p.id === id) ?? TIME_PRESETS[0]
+}

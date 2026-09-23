@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" width="60" height="60"
+     role="img" aria-label="落点提示">
+  <defs>
+    <filter id="g3" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="3.4"/>
+    </filter>
+    <radialGradient id="dot" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".65" stop-color="#ffffff" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="30" cy="30" r="13" fill="#ffffff" opacity=".18" filter="url(#g3)"/>
+  <circle cx="30" cy="30" r="5.2" fill="url(#dot)"/>
+  <circle cx="30" cy="30" r="5.2" fill="#ffffff" opacity=".95"/>
+  <circle cx="30" cy="30" r="9.6" fill="none" stroke="#ffffff" stroke-width="1" opacity=".45"/>
+</svg>

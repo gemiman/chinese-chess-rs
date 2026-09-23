@@ -5,11 +5,14 @@ import {
   DIFFICULTIES,
   MOVE_SPEEDS,
   THINK_MS,
+  TIME_PRESETS,
+  timePresetOf,
   type Color,
   type GameMode,
   type MoveOption,
   type MoveSpeed,
   type StateDto,
+  type TimePresetId,
 } from '../types'
 
 interface SidePanelProps {
@@ -30,6 +33,9 @@ interface SidePanelProps {
   /** 走子动画速度档位。 */
   moveSpeed: MoveSpeed
   onSpeed: (speed: MoveSpeed) => void
+  /** 限时档位。下一局开局时生效。 */
+  timePreset: TimePresetId
+  onTimePreset: (preset: TimePresetId) => void
 }
 
 const SIDE_LABEL: Record<string, string> = { red: '红方', black: '黑方' }
@@ -49,6 +55,8 @@ export function SidePanel(props: SidePanelProps) {
     onFlip,
     moveSpeed,
     onSpeed,
+    timePreset,
+    onTimePreset,
   } = props
   const [text, setText] = useState('')
   const [copied, setCopied] = useState(false)
@@ -129,6 +137,28 @@ export function SidePanel(props: SidePanelProps) {
               {item.label}
             </button>
           ))}
+        </div>
+
+        <div className="field">
+          <span className="field__label">限时</span>
+          <div className="segmented" role="group" aria-label="限时档位">
+            {TIME_PRESETS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`segmented__item${
+                  timePreset === item.id ? ' segmented__item--active' : ''
+                }`}
+                aria-pressed={timePreset === item.id}
+                onClick={() => onTimePreset(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <p className="muted" style={{ margin: '6px 0 0', fontSize: 12 }}>
+            {timePresetOf(timePreset).hint}。改档位后点「重开」生效。
+          </p>
         </div>
 
         {mode === 'engine' ? (
@@ -366,27 +396,27 @@ export function SidePanel(props: SidePanelProps) {
         <div className="legend">
           <div className="legend__item">
             <span className="legend__swatch">
-              <span className="legend__dot" />
+              <img src="/effects/fx-target-dot.svg" alt="" />
             </span>
-            实心圆点 = 该处为空，可以走过去
+            白点 = 该处为空，可以走过去
           </div>
           <div className="legend__item">
             <span className="legend__swatch">
-              <span className="legend__ring" />
+              <img src="/effects/fx-capture.svg" alt="" />
             </span>
-            空心圆环 = 该处有对方棋子，可以吃掉
+            红环 = 该处有对方棋子，可以吃掉
           </div>
           <div className="legend__item">
             <span className="legend__swatch">
-              <span className="legend__sel" />
+              <img src="/effects/fx-select.svg" alt="" />
             </span>
-            琥珀色环 = 当前选中的棋子
+            金环 = 当前选中的棋子
           </div>
           <div className="legend__item">
             <span className="legend__swatch">
-              <span className="legend__last" />
+              <img src="/effects/fx-last-move.svg" alt="" />
             </span>
-            柔光圆环 = 上一着的起点与终点
+            白弧 = 上一着的起点与终点
           </div>
         </div>
         <p className="muted" style={{ marginBottom: 0 }}>

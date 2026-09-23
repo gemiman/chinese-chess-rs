@@ -23,7 +23,9 @@ import {
   type MoveOption,
   type MoveSpeed,
   type StateDto,
+  type TimePresetId,
 } from './types'
+import { timePresetOf } from './types'
 
 /**
  * 「引擎正在思考」的同步守卫。
@@ -58,6 +60,32 @@ function saveSpeed(speed: MoveSpeed): void {
   }
 }
 
+/** 限时档位的本地存储键。 */
+const PRESET_KEY = 'xq.time-preset'
+
+function isPresetId(v: string): v is TimePresetId {
+  return v === 'none' || v === 'blitz' || v === 'standard' || v === 'slow'
+}
+
+/** 读回上次选择的时间档位；存不了或值非法时回落到「不限时」。 */
+function loadPreset(): TimePresetId {
+  try {
+    const raw = localStorage.getItem(PRESET_KEY)
+    if (raw !== null && isPresetId(raw)) return raw
+  } catch {
+    // 同 loadSpeed
+  }
+  return 'none'
+}
+
+function savePreset(preset: TimePresetId): void {
+  try {
+    localStorage.setItem(PRESET_KEY, preset)
+  } catch {
+    // 同上
+  }
+}
+
 interface GameStore {
   state: StateDto | null
   /** 当前选中的棋子（ICCS 坐标）；未选中为 `null`。 */
@@ -69,6 +97,8 @@ interface GameStore {
   flipped: boolean
   /** 走子动画速度档位（记在 localStorage 里）。 */
   moveSpeed: MoveSpeed
+  /** 限时档位（记在 localStorage 里）。开局时下发给 Rust。 */
+  timePreset: TimePresetId
 
   /** 对局模式：双人热座 / 人机对战。 */
   mode: GameMode
@@ -108,6 +138,8 @@ interface GameStore {
   toggleFlip: () => void
   /** 设置走子动画速度。 */
   setMoveSpeed: (speed: MoveSpeed) => void
+  /** 设置限时档位。下一局开局时生效。 */
+  setTimePreset: (preset: TimePresetId) => void
   /** 手动清除错误提示。 */
   dismissError: () => void
 
@@ -156,6 +188,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     busy: false,
     flipped: false,
     moveSpeed: loadSpeed(),
+    timePreset: loadPreset(),
 
     mode: 'hotseat',
     playerColor: 'red',
@@ -254,7 +287,8 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     reset: async () => {
       await run(
-        () => bridge.newGame(),
+        // 限时在这一步下发：开局时把当前档位带给 Rust，由它建钟并开始走秒
+        () => bridge.newGame(undefined, timePresetOf(get().timePreset).control),
         (r) => r.state,
       )
       set({ engineInfo: null, hints: [], hintInfo: null })
@@ -266,6 +300,11 @@ export const useGameStore = create<GameStore>((set, get) => {
     setMoveSpeed: (speed) => {
       saveSpeed(speed)
       set({ moveSpeed: speed })
+    },
+
+    setTimePreset: (preset) => {
+      savePreset(preset)
+      set({ timePreset: preset })
     },
 
     dismissError: () => set({ error: null }),

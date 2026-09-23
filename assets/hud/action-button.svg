@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120"
+     role="img" aria-label="操作按钮">
+  <defs>
+    <linearGradient id="bt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8a6b3c"/>
+      <stop offset=".35" stop-color="#5d452a"/>
+      <stop offset="1" stop-color="#38281a"/>
+    </linearGradient>
+    <radialGradient id="bin" cx=".42" cy=".34" r=".8">
+      <stop offset="0" stop-color="#241a10"/>
+      <stop offset="1" stop-color="#120c06"/>
+    </radialGradient>
+    <filter id="bglow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3.2"/>
+    </filter>
+  </defs>
+  <circle cx="60" cy="60" r="50" fill="#ffbe45" opacity=".22" filter="url(#bglow)"/>
+  <circle cx="60" cy="60" r="50" fill="url(#bt)"/>
+  <circle cx="60" cy="60" r="50" fill="none" stroke="#e8c079" stroke-width="2.4"/>
+  <circle cx="60" cy="60" r="50" fill="none" stroke="#fff0bd" stroke-width="1"
+          opacity=".5" transform="translate(0 -1)"/>
+  <circle cx="60" cy="60" r="40" fill="url(#bin)"/>
+  <circle cx="60" cy="60" r="40" fill="none" stroke="#c9a05a" stroke-width="1.2" opacity=".6"/>
+  <path d="M 28 42 A 40 40 0 0 1 92 42" fill="none" stroke="#ffe9a8"
+        stroke-width="2" opacity=".35" filter="url(#bglow)"/>
+</svg>

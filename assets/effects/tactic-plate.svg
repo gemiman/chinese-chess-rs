@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 460" width="640" height="460"
+     role="img" aria-label="战法名牌匾">
+  <defs>
+    <radialGradient id="amb2" cx=".5" cy=".42" r=".6">
+      <stop offset="0" stop-color="#fff6d4" stop-opacity=".9"/>
+      <stop offset=".32" stop-color="#ffcf6a" stop-opacity=".55"/>
+      <stop offset=".68" stop-color="#ff9d2e" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#ff8a00" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2=".3" y2="1">
+      <stop offset="0" stop-color="#fff4cf"/>
+      <stop offset=".38" stop-color="#ffd268"/>
+      <stop offset=".72" stop-color="#f0a52a"/>
+      <stop offset="1" stop-color="#c9761a"/>
+    </linearGradient>
+    <linearGradient id="goldDark" x1="0" y1="0" x2=".2" y2="1">
+      <stop offset="0" stop-color="#b96f16"/>
+      <stop offset="1" stop-color="#7d4409"/>
+    </linearGradient>
+    <radialGradient id="core" cx=".42" cy=".36" r=".7">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".3" stop-color="#fff0b8"/>
+      <stop offset=".7" stop-color="#ffbe45"/>
+      <stop offset="1" stop-color="#ff9a1f" stop-opacity=".35"/>
+    </radialGradient>
+    <filter id="bigBlur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="26"/>
+    </filter>
+    <filter id="midBlur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7"/>
+    </filter>
+    <filter id="smlBlur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.4"/>
+    </filter>
+  </defs>
+
+  <!-- 大气辉光 -->
+  <ellipse cx="320" cy="200" rx="235" ry="168" fill="url(#amb2)" filter="url(#bigBlur)" opacity=".8"/>
+
+  <!-- 牌匾主体：上下双弧的匾额 -->
+  <g>
+    <path d="M 168 132
+             C 240 104 400 104 472 132
+             L 486 300
+             C 420 330 220 330 154 300 Z"
+          fill="url(#goldDark)"/>
+    <path d="M 172 138
+             C 242 112 398 112 468 138
+             L 481 294
+             C 418 322 222 322 159 294 Z"
+          fill="url(#gold)"/>
+    <!-- 内凹面 -->
+    <path d="M 186 152
+             C 250 130 390 130 454 152
+             L 465 282
+             C 410 306 230 306 175 282 Z"
+          fill="#3a2408" opacity=".82"/>
+    <!-- 内凹面的上暗下亮：让凹陷看得出来 -->
+    <path d="M 186 152 C 250 130 390 130 454 152 L 456 166
+             C 392 145 248 145 184 166 Z" fill="#1c1004" opacity=".7"/>
+    <path d="M 184 268 C 248 292 392 292 456 268 L 458 282
+             C 394 304 246 304 182 282 Z" fill="#ffe6a6" opacity=".35"/>
+    <path d="M 186 152
+             C 250 130 390 130 454 152
+             L 465 282
+             C 410 306 230 306 175 282 Z"
+          fill="none" stroke="#ffe9a8" stroke-width="1.6" opacity=".75"/>
+    <!-- 匾额两端翘头 -->
+    <path d="M 168 132 C 150 140 138 156 132 178 C 146 170 158 166 170 164 Z" fill="url(#gold)"/>
+    <path d="M 472 132 C 490 140 502 156 508 178 C 494 170 482 166 470 164 Z" fill="url(#gold)"/>
+    <!-- 边框上的铆钉 -->
+    <g fill="#fff3c9" opacity=".85">
+      <circle cx="196" cy="150" r="3.4"/><circle cx="320" cy="141" r="3.4"/><circle cx="444" cy="150" r="3.4"/>
+      <circle cx="188" cy="288" r="3.4"/><circle cx="320" cy="299" r="3.4"/><circle cx="452" cy="288" r="3.4"/>
+      <circle cx="180" cy="220" r="3.4"/><circle cx="460" cy="220" r="3.4"/>
+    </g>
+    <!-- 四角如意角花 -->
+    <g fill="none" stroke="url(#gold)" stroke-width="3.2" stroke-linecap="round" opacity=".95">
+      <path d="M 202 168 v -10 h 16"/>
+      <path d="M 438 168 v -10 h -16"/>
+      <path d="M 202 266 v 10 h 16"/>
+      <path d="M 438 266 v 10 h -16"/>
+    </g>
+  </g>
+
+  <!-- 十字光柱：必须画在牌匾之后，否则会被内凹面盖掉（踩过这个坑） -->
+  <g filter="url(#bigBlur)" opacity=".75">
+    <rect x="150" y="196" width="340" height="14" rx="7" fill="#fff6dc"/>
+    <rect x="313" y="86" width="14" height="260" rx="7" fill="#fff0c0"/>
+  </g>
+
+  <!-- 中央宝珠 -->
+  <g>
+    <circle cx="320" cy="216" r="76" fill="url(#core)" filter="url(#bigBlur)"/>
+    <circle cx="320" cy="216" r="52" fill="url(#core)"/>
+    <circle cx="320" cy="216" r="52" fill="none" stroke="#fff6d4" stroke-width="2" opacity=".9"/>
+    <!-- 宝珠上的放射栅格：6 条过心直线 = 12 道辐条 -->
+    <g stroke="#fff4cf" stroke-width="2.2" opacity=".8" stroke-linecap="round">
+      <path d="M 320 164 V 268"/>
+      <path d="M 268 216 H 372"/>
+      <path d="M 283 179 L 357 253"/>
+      <path d="M 357 179 L 283 253"/>
+      <path d="M 275 190 L 365 242"/>
+      <path d="M 365 190 L 275 242"/>
+    </g>
+    <circle cx="320" cy="216" r="20" fill="none" stroke="#fff4cf" stroke-width="1.6" opacity=".6"/>
+    <circle cx="320" cy="216" r="30" fill="#ffffff" opacity=".92" filter="url(#midBlur)"/>
+    <ellipse cx="304" cy="198" rx="20" ry="13" fill="#ffffff" opacity=".9" filter="url(#smlBlur)"/>
+  </g>
+
+  <!-- 顶部吊环 -->
+  <g>
+    <circle cx="320" cy="106" r="17" fill="none" stroke="url(#gold)" stroke-width="6"/>
+    <circle cx="320" cy="106" r="17" fill="none" stroke="#fff2c4" stroke-width="1.4" opacity=".7"/>
+  </g>
+
+  <!-- 星芒 -->
+  <g fill="#fff8dc" opacity=".92">
+    <path d="M 148 92 l 5 14 14 5 -14 5 -5 14 -5 -14 -14 -5 14 -5 z"/>
+    <path d="M 496 120 l 4 11 11 4 -11 4 -4 11 -4 -11 -11 -4 11 -4 z"/>
+    <path d="M 460 336 l 4 11 11 4 -11 4 -4 11 -4 -11 -11 -4 11 -4 z"/>
+    <path d="M 176 322 l 4 11 11 4 -11 4 -4 11 -4 -11 -11 -4 11 -4 z"/>
+  </g>
+</svg>

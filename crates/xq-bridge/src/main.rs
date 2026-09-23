@@ -139,12 +139,18 @@ fn route_api(req: &Request, state: &AppState) -> Response {
         ("GET", "/api/state") => state.with_game(|game| json_of(&game.build_dto())),
 
         ("POST", "/api/new") => {
-            let fen = parse_body(&req.body)
-                .ok()
+            let body = parse_body(&req.body).ok();
+            let fen = body
+                .as_ref()
                 .and_then(|v| v.get("fen").and_then(|f| f.as_str()).map(str::to_string));
+            // 限时配置；缺省即不限时。解析统一在会话层做，两个宿主口径一致。
+            let cfg = xq_session::TimeControl::from_json(
+                body.as_ref().and_then(|v| v.get("time_control")),
+            );
             // 换局时一并重置引擎，避免上一局的置换表污染新局
             state.reset_engine();
             state.with_game(|game| {
+                game.set_time_control(cfg);
                 if let Some(fen) = fen {
                     if let Err(e) = game.load_fen(&fen) {
                         return json_error(400, &format!("FEN 无法解析：{e}"));
@@ -385,6 +391,9 @@ fn print_banner(addr: &str, static_root: Option<&Path>, only_api: bool) {
     println!("    GET  /api/state                                 取当前局面");
     println!(
         "    POST /api/new     {{\"fen\":\"...\"}}                载入局面（省略 fen 则重开）"
+    );
+    println!(
+        "        可选限时：{{\"time_control\":{{\"base_secs\":600,\"step_secs\":30,\"byoyomi_secs\":30}}}}"
     );
     println!(
         "    POST /api/move    {{\"from\":\"h2\",\"to\":\"e2\"}}        走一步（也可 {{\"text\":\"炮二平五\"}}）"

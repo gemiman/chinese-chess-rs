@@ -24,6 +24,10 @@
 //! 消歧，走完子之后再算就会拿到错误的盘面。因此 [`Game::apply`] 先算记谱、
 //! 再落子，并把算好的 [`PlayedMove`] 存下来 —— 而不是事后重算。
 
+pub mod clock;
+
+pub use clock::{Clock, ClockSnapshot, TimeControl, TimeControlInput, Timeout};
+
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -91,6 +95,14 @@ impl AppState {
         level: Difficulty,
         think_ms: u64,
     ) -> Result<EngineMoveOutcome, String> {
+        // 有棋钟时，思考时间要被本方剩余时间封顶 ——
+        // 否则引擎会「想太久」把自己走成超时判负，那显然不合理。
+        // 留 250ms 余量给落子本身，别卡在最后一毫秒上。
+        let think_ms = match self.with_game(|game| game.step_left_ms()) {
+            Some(left) => think_ms.min(left.saturating_sub(250).clamp(50, i64::MAX) as u64),
+            None => think_ms,
+        };
+
         // ① 取局面快照（短锁）
         let mut pos = self.with_game(|game| game.snapshot());
 
@@ -263,6 +275,13 @@ pub struct Game {
     log: Vec<PlayedMove>,
     /// 上一着。
     last: Option<PlayedMove>,
+    /// 棋钟。`None` 表示不限时。
+    clock: Option<Clock>,
+    /// 因超时产生的终局。
+    ///
+    /// 超时**不是**规则产生的终局，所以不能塞进 `xq-core::GameStatus`
+    /// —— 内核只认棋盘上的事实，不认「谁的表走完了」。
+    timeout: Option<Timeout>,
 }
 
 impl Default for Game {
@@ -277,11 +296,53 @@ impl Game {
             pos: Position::startpos(),
             log: Vec::new(),
             last: None,
+            clock: None,
+            timeout: None,
         }
     }
 
+    /// 按限时配置开一局。配置为不限时时等价于 [`Game::new`]。
+    pub fn new_with_clock(cfg: TimeControl) -> Self {
+        let mut game = Self::new();
+        game.set_time_control(cfg);
+        game
+    }
+
+    /// 设定限时并重新计时。棋钟**在开局时就走** ——
+    /// 与真实棋赛一致：摆好钟按下开始，红方就开始用时了。
+    pub fn set_time_control(&mut self, cfg: TimeControl) {
+        self.clock = if cfg.is_unlimited() {
+            None
+        } else {
+            let mut clock = Clock::new(cfg);
+            clock.start(Instant::now());
+            Some(clock)
+        };
+        self.timeout = None;
+    }
+
+    /// 当前限时配置。
+    pub fn time_control(&self) -> TimeControl {
+        self.clock
+            .as_ref()
+            .map(|c| c.config())
+            .unwrap_or(TimeControl::UNLIMITED)
+    }
+
+    /// 归属方本步还剩多少毫秒。不限时时返回 `None`。
+    pub fn step_left_ms(&self) -> Option<i64> {
+        let clock = self.clock.as_ref()?;
+        Some(clock.step_left_ms(self.pos.side_to_move(), Instant::now()))
+    }
+
+    /// 是否已因超时终局。
+    pub fn timeout_loser(&self) -> Option<Color> {
+        self.timeout.map(|t| t.loser)
+    }
+
+    /// 重开一局，保留限时配置。
     pub fn reset(&mut self) {
-        *self = Game::new();
+        *self = Game::new_with_clock(self.time_control());
     }
 
     /// 局面快照。供引擎在**锁外**搜索 —— 搜索可能耗时数秒，不能占着锁。
@@ -317,6 +378,12 @@ impl Game {
         self.pos = pos;
         self.log.clear();
         self.last = None;
+        self.timeout = None;
+        // 换局面等于换一局，棋钟回到满血重走
+        let cfg = self.time_control();
+        if !cfg.is_unlimited() {
+            self.set_time_control(cfg);
+        }
         Ok(())
     }
 
@@ -374,6 +441,22 @@ impl Game {
     }
 
     fn apply_move(&mut self, mv: Move) -> Result<PlayedMove, String> {
+        // ⓪ 先结算棋钟。超时的话这一步不算数 —— 钟停、判负，局面保持不动。
+        if let Some(t) = self.timeout {
+            return Err(format!("对局已因超时结束（{}方负）", t.loser.name_zh()));
+        }
+        let side = self.pos.side_to_move();
+        if let Some(clock) = self.clock.as_mut() {
+            let now = Instant::now();
+            if clock.settle_move(side, now).is_err() {
+                clock.stop();
+                self.timeout = Some(Timeout { loser: side });
+                return Err(format!("{}方超时判负", side.name_zh()));
+            }
+            // 走完这一步就轮到对方，从此刻开始为对方走秒
+            clock.start(now);
+        }
+
         // ① 记谱必须在落子前算（「前 / 后」消歧依赖当前盘面）
         let notation = self
             .pos
@@ -404,20 +487,41 @@ impl Game {
         Ok(played)
     }
 
-    /// 悔一步。
+    /// 悔一步。棋钟一并回退 —— 否则悔棋就成了「白送回时间」。
     pub fn undo(&mut self) -> bool {
         if self.pos.unmake_move().is_none() {
             return false;
         }
         self.log.pop();
         self.last = self.log.last().cloned();
+        // 悔棋同样撤销超时终局
+        self.timeout = None;
+        if let Some(clock) = self.clock.as_mut() {
+            clock.undo();
+            clock.start(Instant::now());
+        }
         true
     }
 
     /// 组装前端需要的完整状态。
     pub fn build_dto(&mut self) -> StateDto {
-        let status = self.pos.status();
-        let status_dto = StatusDto::from(status, &mut self.pos);
+        // 超时优先：它是「非规则终局」，棋盘上未必看得出，只能由会话层给出
+        let status_dto = match self.timeout {
+            Some(t) => StatusDto::timeout(t.loser),
+            None => StatusDto::from(self.pos.status(), &mut self.pos),
+        };
+
+        // 棋钟快照。顺带 start()：玩家第一次看到这个局面，就是他开始用时的时刻。
+        // 重复调用是空操作，不会把起点冲掉。
+        let to_move = self.pos.side_to_move();
+        let clock_dto = match self.clock.as_mut() {
+            Some(clock) => {
+                let now = Instant::now();
+                clock.start(now);
+                Some(clock.snapshot(to_move, now))
+            }
+            None => None,
+        };
 
         let pieces: Vec<PieceDto> = (0..BOARD_SIZE as u8)
             .filter_map(|idx| {
@@ -470,6 +574,7 @@ impl Game {
             history: self.log.clone(),
             halfmove_clock: self.pos.halfmove_clock(),
             fullmove_number: self.pos.fullmove_number(),
+            clock: clock_dto,
         }
     }
 }
@@ -542,6 +647,8 @@ pub struct StateDto {
     pub history: Vec<PlayedMove>,
     pub halfmove_clock: u16,
     pub fullmove_number: u16,
+    /// 棋钟。`null` 表示这一局不限时。
+    pub clock: Option<ClockSnapshot>,
 }
 
 #[derive(Serialize)]
@@ -555,6 +662,19 @@ pub struct StatusDto {
 }
 
 impl StatusDto {
+    /// 超时判负。
+    ///
+    /// 超时**不是棋盘上的事实** —— 局面看起来可能完全正常，所以只能由会话层
+    /// 单独构造，`xq-core::GameStatus` 里没有也不该有这个变体。
+    fn timeout(loser: Color) -> Self {
+        Self {
+            kind: "timeout".to_string(),
+            text: format!("{}方超时，判负", loser.name_zh()),
+            over: true,
+            loser: Some(color_word(loser).to_string()),
+        }
+    }
+
     fn from(status: GameStatus, pos: &mut Position) -> Self {
         let (kind, text, loser) = match status {
             GameStatus::Ongoing => ("ongoing", "进行中".to_string(), None),

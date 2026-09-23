@@ -11,6 +11,13 @@
   --board-face: #d8decc;
   --board-line: #4e5642;
 
+  /* 棋盘宽度：取「容器宽度」与「按一屏高度反推的宽度」中的小者。
+     窗口变大棋盘跟着变大，但永远高不过一屏 —— 高过一屏就得滚动看棋，反而难用。
+     560/620 是棋盘宽高比，所以限高就等于限宽；减掉的 120px 是页头与内边距的占位。
+     时钟条共用这个变量，两者的左右边缘才会永远对齐。 */
+  --board-width: min(100%, calc((100vh - 120px) * 560 / 620));
+  --board-width: min(100%, calc((100dvh - 120px) * 560 / 620));
+
   /* 棋子（红黑材质相同，只差字色） */
   --piece-red: #b3282d;
   --piece-black: #1f2430;
@@ -107,19 +114,356 @@ body {
   flex: 1;
 }
 
+/* 棋盘与分析面板竖排成一列：棋盘吃满宽度，面板落到下方。
+   这样棋盘能随窗口一起放大，不再被侧栏挤在 560px 里。 */
 .app__main {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(320px, 620px) minmax(280px, 360px);
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
-  align-items: start;
-  justify-content: center;
+  align-content: start;
   padding: 24px;
 }
 
-@media (max-width: 900px) {
-  .app__main {
-    grid-template-columns: minmax(0, 1fr);
+/* ------------------------------------------------------------ 对局时钟 */
+
+.clock {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 10px;
+  /* 与棋盘同宽，左右边缘对齐 */
+  width: var(--board-width);
+  max-width: 1100px;
+  margin: 0 auto 12px;
+}
+
+.clock--off {
+  justify-content: center;
+}
+
+.clock__off {
+  font-size: 13px;
+  color: var(--ui-text-3);
+}
+
+.clock__face {
+  flex: 1 1 150px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 14px;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius-md);
+  background: var(--ui-panel);
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease);
+}
+
+/* 该谁走，谁的钟就亮起来 */
+.clock__face--active {
+  border-color: var(--coach-good);
+  background: rgba(46, 134, 222, 0.06);
+}
+
+/* 时间吃紧：颜色 + 粗细双通道，不只靠颜色 */
+.clock__face--low {
+  border-color: var(--coach-dubious);
+}
+
+.clock__face--low .clock__step {
+  color: #b06a00;
+  font-weight: 600;
+}
+
+.clock__face--danger {
+  border-color: var(--state-check);
+  background: rgba(208, 2, 27, 0.07);
+}
+
+.clock__face--danger .clock__step {
+  color: var(--state-check);
+  font-weight: 700;
+}
+
+.clock__label {
+  font-size: 13px;
+  color: var(--ui-text-2);
+}
+
+.clock__base {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 600;
+  /* 等宽数字：否则秒数跳动时整行宽度会来回抖 */
+  font-variant-numeric: tabular-nums;
+}
+
+.clock__step {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ui-text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.clock__step--idle {
+  color: var(--ui-text-3);
+}
+
+/* 倒计时环：素材只给底板，进度弧由这里画。
+   进度是运行时数据，烤进素材里应用就驱动不了 —— 见 assets/hud/timer-ring.svg。 */
+.clock__ring {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  margin-left: auto;
+}
+
+.clock__ring img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.clock__ring-arc {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from -90deg,
+    #fff3c4 0deg,
+    #ffcb4d calc(var(--p) * 0.55),
+    #f0961c var(--p),
+    rgba(0, 0, 0, 0) var(--p)
+  );
+  -webkit-mask: radial-gradient(closest-side, transparent 71%, #000 72%, #000 87%, transparent 88%);
+  mask: radial-gradient(closest-side, transparent 71%, #000 72%, #000 87%, transparent 88%);
+  filter: drop-shadow(0 0 4px rgba(255, 190, 61, 0.8));
+}
+
+.clock__ring-num {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff6dc;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 8px rgba(255, 190, 61, 0.9),
+    0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.clock__meta {
+  flex: 1 1 100%;
+  font-size: 12px;
+  color: var(--ui-text-3);
+  text-align: center;
+}
+
+/* ------------------------------------------------------------ 战法名出场 */
+
+/* 棋盘的定位容器：出场特效要正好叠在棋盘上。
+ *
+ * ⚠️ 这里**不能**写 display:flex —— 那会让 .board-wrap 变成「按内容宽度」收缩，
+ * 而棋盘的宽度是 min(100%, …)，百分比一旦对上收缩容器就成了循环依赖，直接塌成 0。
+ * 居中由里层的 .board-wrap 负责，这一层只管定位。 */
+.board-holder {
+  position: relative;
+}
+
+/* 与棋盘同宽、同宽高比，所以刚好盖住棋盘。
+   **不盖时钟条** —— 出场那 2.5 秒里钟还在走，挡住会让人错过读秒。 */
+.tactic {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: var(--board-width);
+  max-width: 1100px;
+  aspect-ratio: 560 / 620;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  pointer-events: none;
+  background: #120806;
+  /* 字号按「舞台宽度」缩放，而不是按视口 —— 棋盘放大时金字跟着放大 */
+  container-type: inline-size;
+}
+
+.tactic__scrim {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 40%, #ff9a1f 0%, #c2560a 46%, #5a1e00 100%);
+}
+
+.tactic__rays,
+.tactic__plate {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+}
+
+.tactic__rays {
+  width: 150%;
+}
+
+.tactic__plate {
+  width: 92%;
+}
+
+.tactic__name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 70%;
+  text-align: center;
+  font-family: var(--font-zh);
+  font-weight: 700;
+  font-size: 15cqw;
+  letter-spacing: 0.1em;
+  text-indent: 0.1em;
+  background: linear-gradient(180deg, #fffdf2 0%, #ffe9a8 30%, #ffbe3d 60%, #dc7f0c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* 第一层零模糊的深色 shadow 是**硬描边**，专门把金字从亮橙底上拔出来；
+     后两层才是辉光。顺序不能反，换过来就糊成一团。 */
+  filter: drop-shadow(0 3px 0 rgba(74, 22, 0, 0.9)) drop-shadow(0 0 16px rgba(255, 205, 70, 1))
+    drop-shadow(0 0 46px rgba(255, 120, 0, 0.85));
+  opacity: 0;
+}
+
+.tactic__flash {
+  position: absolute;
+  inset: -20%;
+  opacity: 0;
+  background: radial-gradient(
+    circle at 50% 40%,
+    #fff 0%,
+    rgba(255, 225, 150, 0.75) 18%,
+    rgba(255, 150, 20, 0) 46%
+  );
+}
+
+/* 五层各走各的节奏，错开才有「一层层压上来」的感觉 */
+.tactic__scrim {
+  animation: t-scrim 2500ms ease-out forwards;
+}
+.tactic__flash {
+  animation: t-flash 900ms ease-out forwards;
+}
+.tactic__rays {
+  animation: t-rays 2500ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+}
+.tactic__plate {
+  animation: t-plate 2500ms cubic-bezier(0.2, 1.35, 0.3, 1) forwards;
+}
+.tactic__name {
+  animation: t-name 2500ms cubic-bezier(0.2, 1.15, 0.3, 1) 220ms forwards;
+}
+
+@keyframes t-scrim {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.62;
+  }
+  74% {
+    opacity: 0.62;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes t-flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  16% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+@keyframes t-rays {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-24deg) scale(0.45);
+  }
+  18% {
+    opacity: 0.95;
+  }
+  70% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(16deg) scale(1.15);
+  }
+}
+
+@keyframes t-plate {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.42);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.04);
+  }
+  30% {
+    transform: translate(-50%, -50%) scale(0.99);
+  }
+  72% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+}
+
+@keyframes t-name {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.86);
+    letter-spacing: 0.6em;
+  }
+  22% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    letter-spacing: 0.14em;
+  }
+  74% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* 系统要求减少动效：整段出场直接不播（战法名在侧栏照样看得到） */
+@media (prefers-reduced-motion: reduce) {
+  .tactic {
+    display: none;
   }
 }
 
@@ -132,8 +476,8 @@ body {
 
 .board {
   position: relative;
-  width: 100%;
-  max-width: 560px;
+  width: var(--board-width);
+  max-width: 1100px;
   aspect-ratio: 560 / 620;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
@@ -189,6 +533,11 @@ body {
   display: block;
   pointer-events: none;
   -webkit-user-drag: none;
+  /* 投影画在这里、不画进棋子 SVG —— SVG 的 viewBox 只有 64×64，而圆盘半径 29
+     还要向下让出厚度，底部本就逼近 64；画在里面的 feDropShadow 必然越过 viewBox，
+     被视口**裁成一条直边**，棋子看着像被削平了一刀。
+     CSS 的 drop-shadow 是对渲染结果施加的滤镜，可以画到元素外面，不受 viewBox 约束。 */
+  filter: drop-shadow(0 2.6px 2.2px rgba(0, 0, 0, 0.42));
 }
 
 .piece--movable {
@@ -209,13 +558,17 @@ body {
 }
 
 .piece--selected img {
-  filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.45))
-    drop-shadow(0 0 5px var(--state-selected)) drop-shadow(0 0 2px var(--state-selected));
+  /* 第一层是常驻投影（必须带着，否则选中时会「掉」一层影子），
+     第二层是抬起后拉远的投影，后两层才是选中光环。 */
+  filter: drop-shadow(0 2.6px 2.2px rgba(0, 0, 0, 0.42))
+    drop-shadow(0 5px 5px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 5px var(--state-selected))
+    drop-shadow(0 0 2px var(--state-selected));
 }
 
 /* 被将军的将帅：红色光环 + 跳动（形状 + 动效双通道，不只靠颜色） */
 .piece--checked img {
-  filter: drop-shadow(0 0 6px var(--state-check)) drop-shadow(0 0 3px var(--state-check));
+  filter: drop-shadow(0 2.6px 2.2px rgba(0, 0, 0, 0.42))
+    drop-shadow(0 0 6px var(--state-check)) drop-shadow(0 0 3px var(--state-check));
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -234,64 +587,76 @@ body {
   }
 }
 
-/* --- 标记层 ---
- * 无障碍约定（见 assets/tokens/colors.md 的 WCAG 实测结论：状态色在木色底上
- * 对比度普遍不达标 4.5:1），因此每一种状态都必须「颜色 + 形状」双重编码：
+/* --- 标记层（光效） ---
  *
- *   合法落点(空)   → 实心圆点
- *   合法落点(吃子) → 空心圆环
- *   选中           → 粗琥珀环
- *   上一着         → 蓝色柔光圆环
+ * 光效现在是素材包里的 SVG（`assets/effects/`），不是 CSS 画的圈。
+ * 它们在 `Board.tsx` 里**压在棋子之上** —— 素材的光环半径贴着棋子外沿，
+ * 放到棋子下面会被整个盖住，等于没画。
+ *
+ * 无障碍约定（见 assets/tokens/colors.md 的 WCAG 实测结论：状态色在棋盘上
+ * 对比度普遍不达标 4.5:1），所以每种状态仍要「颜色 + 形状」双重编码：
+ *
+ *   合法落点(空)   → 白色小点
+ *   合法落点(吃子) → 红色整环
+ *   选中           → 金色整环
+ *   上一着         → 白色**弧**（不是整环，形状与上面三者都不同）+ 会自转
  */
 
-.marker {
+.board__layer--fx {
+  pointer-events: none;
+}
+
+.fx {
   position: absolute;
   transform: translate(-50%, -50%);
+  width: 10.714%;
+  aspect-ratio: 1 / 1;
   pointer-events: none;
 }
 
-/* 合法落点 · 空位：实心圆点 */
-.marker--dot {
-  width: 3.8%;
-  aspect-ratio: 1 / 1;
-  border-radius: 50%;
-  background: var(--state-legal);
-  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.9);
+.fx img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* 环在素材里的半径正好等于棋子外沿，稍微放大一点才露得出来、
+     不至于和棋子边缘糊在一起。 */
+  transform: scale(1.12);
+  transform-origin: center;
+  animation: fx-breathe 1.5s ease-in-out infinite;
 }
 
-/* 合法落点 · 吃子：空心圆环 */
-.marker--ring {
-  width: 11.6%;
-  aspect-ratio: 1 / 1;
-  border-radius: 50%;
-  border: 3px solid var(--state-capture);
-  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.75);
+@keyframes fx-breathe {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: scale(1.12);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
 }
 
-/* 选中：粗琥珀环 */
-.marker--selected {
-  width: 12.6%;
-  aspect-ratio: 1 / 1;
-  border-radius: 50%;
-  border: 3px solid var(--state-selected);
-  background: rgba(245, 166, 35, 0.18);
+/* 上一着的白弧自转，一眼能认出「这是刚走的那一步」 */
+.fx--spin img {
+  animation: fx-spin 3.6s linear infinite;
 }
 
-/* 上一着：细圆环，直径略大于棋子，只留一丝外发光
- *
- * 这一层压在棋子之上，所以不能填充 —— 填色会把棋子的字盖住。
- * 形状与其它圆形标记的区别在那一丝柔光晕：其余标记都是硬边环。 */
-.board__layer--overlay {
-  pointer-events: none;
+@keyframes fx-spin {
+  from {
+    transform: scale(1.12) rotate(0deg);
+  }
+  to {
+    transform: scale(1.12) rotate(360deg);
+  }
 }
 
-.marker--last {
-  width: 11.4%;
-  aspect-ratio: 1 / 1;
-  border-radius: 50%;
-  border: 1.5px solid rgba(52, 152, 219, 0.62);
-  background: none;
-  box-shadow: 0 0 4px 0 rgba(52, 152, 219, 0.16);
+/* 系统要求减少动效时，光环只静态显示 */
+@media (prefers-reduced-motion: reduce) {
+  .fx img,
+  .fx--spin img {
+    animation: none;
+  }
 }
 
 /* --- 走子动画 ---
@@ -331,6 +696,8 @@ body {
   width: 100%;
   height: 100%;
   display: block;
+  /* 与 .piece img 同一道投影，飞行中才不会突然「没有影子」 */
+  filter: drop-shadow(0 2.6px 2.2px rgba(0, 0, 0, 0.42));
 }
 
 /* 棋子在空中时，把它在终点的本体藏起来，落地后再由它接管 */
@@ -341,9 +708,13 @@ body {
 /* ------------------------------------------------------------ 侧栏 */
 
 .panel {
-  display: flex;
-  flex-direction: column;
+  /* 面板落到棋盘下方后会拿到整个宽度，卡片改成多列自适应 ——
+     否则宽屏下每张卡都被拉成通栏，正文行长过长反而不好读。 */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 16px;
+  align-items: start;
+  width: 100%;
 }
 
 .card {
@@ -564,34 +935,12 @@ body {
   place-items: center;
 }
 
-.legend__dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--state-legal);
-}
-
-.legend__ring {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2.5px solid var(--state-capture);
-}
-
-.legend__sel {
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  border: 2.5px solid var(--state-selected);
-  background: rgba(245, 166, 35, 0.2);
-}
-
-.legend__last {
-  width: 10px;
-  height: 10px;
-  border: 1.5px solid rgba(52, 152, 219, 0.62);
-  border-radius: 50%;
-  box-shadow: 0 0 3px 0 rgba(52, 152, 219, 0.16);
+/* 图例小样直接引光效素材 —— 保证「图例里看到的」就是「棋盘上画的」，
+   两边各画一套 CSS 迟早会对不上。 */
+.legend__swatch img {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 /* 提示 / 错误 */

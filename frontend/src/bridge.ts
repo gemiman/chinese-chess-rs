@@ -25,13 +25,14 @@ import type {
   MoveResponse,
   StateDto,
   StateResponse,
+  TimeControlInput,
 } from './types'
 
 export interface EngineBridge {
   /** 取当前局面。 */
   state(): Promise<StateDto>
-  /** 重开一局；给了 `fen` 则载入该局面。 */
-  newGame(fen?: string): Promise<StateResponse>
+  /** 重开一局；给了 `fen` 则载入该局面，给了 `timeControl` 则启用限时。 */
+  newGame(fen?: string, timeControl?: TimeControlInput | null): Promise<StateResponse>
   /** 按坐标走一步。 */
   move(from: string, to: string): Promise<MoveResponse>
   /** 按中文记谱或 ICCS 串走一步。 */
@@ -83,7 +84,12 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
 
 export const httpBridge: EngineBridge = {
   state: () => request<StateDto>('/state'),
-  newGame: (fen) => request<StateResponse>('/new', fen === undefined ? {} : { fen }),
+  newGame: (fen, timeControl) =>
+    request<StateResponse>('/new', {
+      ...(fen === undefined ? {} : { fen }),
+      // 不限时就不发这个字段，让服务端走缺省路径
+      ...(timeControl ? { time_control: timeControl } : {}),
+    }),
   move: (from, to) => request<MoveResponse>('/move', { from, to }),
   playText: (text) => request<MoveResponse>('/move', { text }),
   // ⚠️ 必须显式传一个 body（哪怕是空对象）：`request` 是以「有没有 body」来决定
@@ -130,7 +136,12 @@ const invoke =
  */
 export const tauriBridge: EngineBridge = {
   state: () => invoke!<StateDto>('engine_state'),
-  newGame: (fen) => invoke!<StateResponse>('new_game', { fen: fen ?? null }),
+  newGame: (fen, timeControl) =>
+    invoke!<StateResponse>('new_game', {
+      fen: fen ?? null,
+      // Tauri 会把 camelCase 的 JS 参数名映射到 Rust 的 snake_case
+      timeControl: timeControl ?? null,
+    }),
   move: (from, to) => invoke!<MoveResponse>('make_move', { from, to }),
   playText: (text) => invoke!<MoveResponse>('play_text', { text }),
   undo: () => invoke!<StateResponse>('undo'),

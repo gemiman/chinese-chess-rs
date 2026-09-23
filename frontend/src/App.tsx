@@ -1,7 +1,9 @@
 import { useEffect } from 'react'
 
 import { Board } from './components/Board'
+import { ClockBar } from './components/ClockBar'
 import { SidePanel } from './components/SidePanel'
+import { TacticReveal } from './components/TacticReveal'
 import { runningInTauri } from './bridge'
 import { legalTargetsFrom, useGameStore } from './store'
 
@@ -20,6 +22,9 @@ export default function App() {
   const toggleFlip = useGameStore((s) => s.toggleFlip)
   const moveSpeed = useGameStore((s) => s.moveSpeed)
   const setMoveSpeed = useGameStore((s) => s.setMoveSpeed)
+  const timePreset = useGameStore((s) => s.timePreset)
+  const setTimePreset = useGameStore((s) => s.setTimePreset)
+  const coachNote = useGameStore((s) => s.coachNote)
   const dismissError = useGameStore((s) => s.dismissError)
 
   const mode = useGameStore((s) => s.mode)
@@ -69,15 +74,24 @@ export default function App() {
 
       <main className="app__main">
         <section>
-          <Board
-            state={state}
-            selected={selected}
-            legalTargets={legalTargets}
+          <ClockBar
+            clock={state.clock}
+            side={state.side}
             flipped={flipped}
-            onSquare={clickSquare}
-            interactive={playerTurn && !thinking}
-            moveSpeed={moveSpeed}
+            over={state.status.over}
           />
+          <div className="board-holder">
+            <Board
+              state={state}
+              selected={selected}
+              legalTargets={legalTargets}
+              flipped={flipped}
+              onSquare={clickSquare}
+              interactive={playerTurn && !thinking}
+              moveSpeed={moveSpeed}
+            />
+            <TacticReveal note={coachNote} />
+          </div>
           {error !== null ? (
             <div className="notice notice--error" style={{ marginTop: 16 }} role="alert">
               <strong>操作失败：</strong>
@@ -109,6 +123,8 @@ export default function App() {
             onFlip={toggleFlip}
             moveSpeed={moveSpeed}
             onSpeed={setMoveSpeed}
+            timePreset={timePreset}
+            onTimePreset={setTimePreset}
           />
         </aside>
       </main>

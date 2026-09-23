@@ -53,7 +53,7 @@ use tauri::{Manager, State};
 use xq_ai::Difficulty;
 use xq_session::{
     AppState, CoachResponse, EngineMoveResponse, HintResponse, MoveResponse, StateDto,
-    StateResponse,
+    StateResponse, TimeControl, TimeControlInput,
 };
 
 /// 启动桌面应用。
@@ -84,12 +84,20 @@ fn engine_state(state: State<'_, Arc<AppState>>) -> StateDto {
     state.with_game(|game| game.build_dto())
 }
 
-/// 重开一局；给了 `fen` 则载入该局面。
+/// 重开一局；给了 `fen` 则载入该局面，给了 `time_control` 则启用限时。
 #[tauri::command]
-fn new_game(state: State<'_, Arc<AppState>>, fen: Option<String>) -> Result<StateResponse, String> {
+fn new_game(
+    state: State<'_, Arc<AppState>>,
+    fen: Option<String>,
+    time_control: Option<TimeControlInput>,
+) -> Result<StateResponse, String> {
+    let cfg = time_control
+        .map(TimeControl::from)
+        .unwrap_or(TimeControl::UNLIMITED);
     // 换局时一并重置引擎，避免上一局的置换表污染新局
     state.reset_engine();
     state.with_game(|game| {
+        game.set_time_control(cfg);
         if let Some(fen) = fen {
             game.load_fen(&fen)?;
         } else {

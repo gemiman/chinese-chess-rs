@@ -119,16 +119,18 @@ export function Board({
     onSquare(squareToIccs(chess.col, chess.row))
   }
 
-  /** 画一个标记。 */
-  function marker(sq: string, className: string) {
+  /** 画一个光效。`fx` 是 `assets/effects/` 下的文件名主干。 */
+  function effect(sq: string, fx: string, spin = false) {
     const pos = positionOf(sq, flipped)
     if (!pos) return null
     return (
-      <span
-        key={`${className}-${sq}`}
-        className={`marker ${className}`}
+      <div
+        key={`${fx}-${sq}`}
+        className={`fx${spin ? ' fx--spin' : ''}`}
         style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-      />
+      >
+        <img src={`/effects/${fx}.svg`} alt="" draggable={false} />
+      </div>
     )
   }
 
@@ -143,15 +145,6 @@ export function Board({
         }`}
       >
         <img className="board__surface" src="/board/board-classic.svg" alt="" draggable={false} />
-
-        {/* 标记层在棋子之下：圆环大于棋子，故仍会露在棋子外圈 */}
-        <div className="board__layer">
-          {[...reachable].map((sq) =>
-            capturable.has(sq) ? marker(sq, 'marker--ring') : marker(sq, 'marker--dot'),
-          )}
-
-          {selected !== null ? marker(selected, 'marker--selected') : null}
-        </div>
 
         <div className="board__layer">
           {state.pieces.map((piece) => {
@@ -178,12 +171,14 @@ export function Board({
           })}
         </div>
 
-        {/* 上一着标记单独一层，压在棋子**之上** ——
-            它标的是「落点」那一格，而落点上通常正好有棋子；若放在棋子之下，
-            方框比棋子小，会被完全盖住，等于没画。 */}
-        <div className="board__layer board__layer--overlay">
-          {lastFrom ? marker(lastFrom, 'marker--last') : null}
-          {lastTo ? marker(lastTo, 'marker--last') : null}
+        {/* 光效层：**压在棋子之上**。
+            素材里的光环半径（27.6/60）正好贴着棋子外沿，放在棋子下面会被整个盖住，
+            等于没画；上一着是白弧 + 极淡整格暖色，压在上面才看得出来是个「弧」。 */}
+        <div className="board__layer board__layer--fx">
+          {[...reachable].map((sq) => effect(sq, capturable.has(sq) ? 'fx-capture' : 'fx-move'))}
+          {selected !== null ? effect(selected, 'fx-select') : null}
+          {lastFrom !== null ? effect(lastFrom, 'fx-last-move', true) : null}
+          {lastTo !== null ? effect(lastTo, 'fx-last-move', true) : null}
         </div>
 
         {/* 飞行棋子：从起点直线滑到终点。外层做成与棋盘同尺寸，
