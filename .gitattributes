@@ -1,0 +1,22 @@
+# 行尾策略：仓库内统一存 LF，检出一律 LF
+# 项目跨 Windows / Linux / macOS；shell 脚本若带上 CRLF，在 Linux 下会报 bad interpreter
+* text=auto eol=lf
+
+# Windows 原生脚本例外：保留 CRLF，避免 cmd 与 PowerShell 的兼容问题
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# 二进制文件：禁止任何行尾转换，防止内容被改坏
+*.png binary
+*.ico binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+
+# SVG 是 XML 文本，参与 diff 与行尾归一
+*.svg text
