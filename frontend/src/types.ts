@@ -194,3 +194,22 @@ export const THINK_MS: Record<DifficultyId, number> = {
   l4: 2_000,
   l5: 3_000,
 }
+
+// ---------------------------------------------------------------- 走子动画
+
+/** 走子动画速度档位。 */
+export type MoveSpeed = 'fast' | 'normal' | 'slow'
+
+/** 各档位的动画时长（毫秒）。「慢动作」档是给复盘看棋用的。 */
+export const MOVE_MS: Record<MoveSpeed, number> = {
+  fast: 180,
+  normal: 400,
+  slow: 1_000,
+}
+
+/** 速度档位表，用于侧栏渲染。 */
+export const MOVE_SPEEDS: { id: MoveSpeed; label: string }[] = [
+  { id: 'fast', label: '快' },
+  { id: 'normal', label: '正常' },
+  { id: 'slow', label: '慢动作' },
+]

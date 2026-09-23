@@ -178,7 +178,9 @@ body {
   padding: 0;
   background: none;
   cursor: default;
-  transition: transform var(--dur-fast) var(--ease);
+  transition:
+    transform var(--dur-fast) var(--ease),
+    filter var(--dur-fast) var(--ease);
 }
 
 .piece img {
@@ -193,16 +195,22 @@ body {
   cursor: pointer;
 }
 
+/* 悬停：轻轻抬一点，提示「这个能点」 */
 .piece--movable:hover {
-  transform: translate(-50%, -50%) scale(1.06);
+  transform: translate(-50%, calc(-50% - 2px)) scale(1.05);
 }
 
+/* 选中：棋子被「拿起来」—— 放大 + 上移，同时投影拉远变淡。
+ * 投影是判读「离盘面多高」的主要线索：抬得越高，影子越偏下、越散、越淡。
+ * z-index 让抬起的棋子压住相邻棋子，否则会被后面画的棋子切掉一角。 */
 .piece--selected {
-  transform: translate(-50%, -50%) scale(1.08);
+  transform: translate(-50%, calc(-50% - 4px)) scale(1.1);
+  z-index: 3;
 }
 
 .piece--selected img {
-  filter: drop-shadow(0 0 5px var(--state-selected)) drop-shadow(0 0 2px var(--state-selected));
+  filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.45))
+    drop-shadow(0 0 5px var(--state-selected)) drop-shadow(0 0 2px var(--state-selected));
 }
 
 /* 被将军的将帅：红色光环 + 跳动（形状 + 动效双通道，不只靠颜色） */
@@ -284,6 +292,50 @@ body {
   border: 1.5px solid rgba(52, 152, 219, 0.62);
   background: none;
   box-shadow: 0 0 4px 0 rgba(52, 152, 219, 0.16);
+}
+
+/* --- 走子动画 ---
+ *
+ * 结构：.fly 与棋盘同尺寸，负责把棋子从起点平移到终点；.fly__piece 只是
+ * 定位在终点的那枚棋子，本身不动。
+ *
+ * 为什么让 .fly 与棋盘同尺寸：translate 的百分比是相对元素**自身**尺寸的，
+ * 只有同尺寸时它才等于棋盘百分比，于是位移可以直接用同一套坐标算出来。
+ */
+.fly {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: fly-slide var(--fly-ms) ease-out both;
+}
+
+@keyframes fly-slide {
+  from {
+    transform: translate(var(--fly-dx), var(--fly-dy));
+  }
+  to {
+    transform: translate(0, 0);
+  }
+}
+
+.fly__piece {
+  position: absolute;
+  width: 10.714%;
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+}
+
+.fly__piece img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 棋子在空中时，把它在终点的本体藏起来，落地后再由它接管 */
+.piece--hidden {
+  visibility: hidden;
 }
 
 /* ------------------------------------------------------------ 侧栏 */

@@ -21,6 +21,7 @@ import {
   type GameMode,
   type HintItem,
   type MoveOption,
+  type MoveSpeed,
   type StateDto,
 } from './types'
 
@@ -34,6 +35,29 @@ import {
  */
 let engineInFlight = false
 
+/** 走子动画速度的本地存储键。 */
+const SPEED_KEY = 'xq.move-speed'
+
+/** 读回上次选择的速度档位；存不了或值非法时回落到 normal。 */
+function loadSpeed(): MoveSpeed {
+  try {
+    const raw = localStorage.getItem(SPEED_KEY)
+    if (raw === 'fast' || raw === 'normal' || raw === 'slow') return raw
+  } catch {
+    // 隐私模式下 localStorage 可能被禁用，回落默认值即可，不必打扰用户
+  }
+  return 'normal'
+}
+
+/** 记住速度选择。存不上也不影响本次会话。 */
+function saveSpeed(speed: MoveSpeed): void {
+  try {
+    localStorage.setItem(SPEED_KEY, speed)
+  } catch {
+    // 同上
+  }
+}
+
 interface GameStore {
   state: StateDto | null
   /** 当前选中的棋子（ICCS 坐标）；未选中为 `null`。 */
@@ -43,6 +67,8 @@ interface GameStore {
   busy: boolean
   /** 是否翻转视角（执黑时用）。 */
   flipped: boolean
+  /** 走子动画速度档位（记在 localStorage 里）。 */
+  moveSpeed: MoveSpeed
 
   /** 对局模式：双人热座 / 人机对战。 */
   mode: GameMode
@@ -80,6 +106,8 @@ interface GameStore {
   reset: () => Promise<void>
   /** 切换视角。 */
   toggleFlip: () => void
+  /** 设置走子动画速度。 */
+  setMoveSpeed: (speed: MoveSpeed) => void
   /** 手动清除错误提示。 */
   dismissError: () => void
 
@@ -127,6 +155,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     error: null,
     busy: false,
     flipped: false,
+    moveSpeed: loadSpeed(),
 
     mode: 'hotseat',
     playerColor: 'red',
@@ -233,6 +262,11 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     toggleFlip: () => set((s) => ({ flipped: !s.flipped })),
+
+    setMoveSpeed: (speed) => {
+      saveSpeed(speed)
+      set({ moveSpeed: speed })
+    },
 
     dismissError: () => set({ error: null }),
 

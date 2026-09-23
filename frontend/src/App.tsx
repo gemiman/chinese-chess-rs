@@ -18,6 +18,8 @@ export default function App() {
   const undo = useGameStore((s) => s.undo)
   const reset = useGameStore((s) => s.reset)
   const toggleFlip = useGameStore((s) => s.toggleFlip)
+  const moveSpeed = useGameStore((s) => s.moveSpeed)
+  const setMoveSpeed = useGameStore((s) => s.setMoveSpeed)
   const dismissError = useGameStore((s) => s.dismissError)
 
   const mode = useGameStore((s) => s.mode)
@@ -74,6 +76,7 @@ export default function App() {
             flipped={flipped}
             onSquare={clickSquare}
             interactive={playerTurn && !thinking}
+            moveSpeed={moveSpeed}
           />
           {error !== null ? (
             <div className="notice notice--error" style={{ marginTop: 16 }} role="alert">
@@ -104,6 +107,8 @@ export default function App() {
             onUndo={() => void undo()}
             onReset={() => void reset()}
             onFlip={toggleFlip}
+            moveSpeed={moveSpeed}
+            onSpeed={setMoveSpeed}
           />
         </aside>
       </main>

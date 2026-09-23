@@ -1,7 +1,16 @@
 import { useState } from 'react'
 
 import { useGameStore } from '../store'
-import { DIFFICULTIES, THINK_MS, type Color, type GameMode, type MoveOption, type StateDto } from '../types'
+import {
+  DIFFICULTIES,
+  MOVE_SPEEDS,
+  THINK_MS,
+  type Color,
+  type GameMode,
+  type MoveOption,
+  type MoveSpeed,
+  type StateDto,
+} from '../types'
 
 interface SidePanelProps {
   state: StateDto
@@ -18,13 +27,29 @@ interface SidePanelProps {
   onUndo: () => void
   onReset: () => void
   onFlip: () => void
+  /** 走子动画速度档位。 */
+  moveSpeed: MoveSpeed
+  onSpeed: (speed: MoveSpeed) => void
 }
 
 const SIDE_LABEL: Record<string, string> = { red: '红方', black: '黑方' }
 
 export function SidePanel(props: SidePanelProps) {
-  const { state, selected, legalTargets, busy, flipped, onPlay, onPickSquare, onMove, onUndo, onReset, onFlip } =
-    props
+  const {
+    state,
+    selected,
+    legalTargets,
+    busy,
+    flipped,
+    onPlay,
+    onPickSquare,
+    onMove,
+    onUndo,
+    onReset,
+    onFlip,
+    moveSpeed,
+    onSpeed,
+  } = props
   const [text, setText] = useState('')
   const [copied, setCopied] = useState(false)
 
@@ -264,6 +289,23 @@ export function SidePanel(props: SidePanelProps) {
           <button type="button" className="btn" onClick={copyFen} disabled={busy}>
             {copied ? '已复制 FEN' : '复制 FEN'}
           </button>
+        </div>
+
+        <div className="field" style={{ marginTop: 14 }}>
+          <span className="field__label">走子速度</span>
+          <div className="segmented" role="group" aria-label="走子动画速度">
+            {MOVE_SPEEDS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`segmented__item${moveSpeed === item.id ? ' segmented__item--active' : ''}`}
+                aria-pressed={moveSpeed === item.id}
+                onClick={() => onSpeed(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
