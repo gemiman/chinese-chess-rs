@@ -221,6 +221,17 @@ impl Clock {
         self.limit_ms(side) - self.elapsed_ms(now)
     }
 
+    /// 现在就到点了吗？
+    ///
+    /// **只查不改**。不像 [`Clock::settle_move`] 那样扣局时、推进读秒 ——
+    /// 那个是「落子那一刻结算」用的，提前调用会把还没走完的这一步直接结掉，
+    /// 钟会莫名其妙地跑快。
+    ///
+    /// 表没在走（终局、或还没开始）时永远返回 `false`。
+    pub fn timed_out(&self, side: Color, now: Instant) -> bool {
+        self.since.is_some() && self.elapsed_ms(now) > self.limit_ms(side)
+    }
+
     /// 结算一步：扣局时、必要时切读秒；本步超时则返回 `Err`。
     ///
     /// 返回的是本步实际用时（毫秒）。
@@ -306,6 +317,43 @@ mod tests {
         let t = Instant::now();
         // 局时还剩 10 分钟，但单步超过步时 30 秒 → 直接判负
         assert!(!play(&mut clock, t, Color::Red, Duration::from_secs(31)));
+    }
+
+    /// `timed_out` 必须**只查不改**，而且要能查出真正的到点。
+    ///
+    /// 这两件事是一体的：如果它图省事调了 `settle_move`，查一次就把这一步结掉了
+    /// （`since` 变 `None`），于是**第二次起永远查不出超时** —— 前端每 100 毫秒查一次，
+    /// 结果就是「钟走到 0 了，但怎么都不判负」。而它同时还会每次扣一遍局时，
+    /// 钟会随着「查得越勤」跑得越快。
+    ///
+    /// 用合成的时间点（`t0 + Duration`）而不是真的 sleep，测试才既确定又快。
+    #[test]
+    fn timed_out_only_reads_and_detects_expiry() {
+        let one_second_step = TimeControl {
+            base_secs: 60,
+            step_secs: 1,
+            byoyomi_secs: 0,
+        };
+        let t0 = Instant::now();
+
+        // 表还没开始走 → 永远不判超时
+        let idle = Clock::new(one_second_step);
+        assert!(!idle.timed_out(Color::Red, t0 + Duration::from_secs(99)));
+
+        let mut clock = Clock::new(one_second_step);
+        clock.start(t0);
+        assert!(!clock.timed_out(Color::Red, t0), "刚开始不该到点");
+        // 连着查：查到一半的状态不能被它改掉
+        assert!(!clock.timed_out(Color::Red, t0 + Duration::from_millis(500)));
+        assert!(!clock.timed_out(Color::Red, t0 + Duration::from_millis(999)));
+        assert!(
+            clock.timed_out(Color::Red, t0 + Duration::from_millis(1_001)),
+            "过了步时就该查到"
+        );
+
+        // 停表之后不再判 —— 终局了就不该再被翻转结果
+        clock.stop();
+        assert!(!clock.timed_out(Color::Red, t0 + Duration::from_secs(99)));
     }
 
     #[test]

@@ -7,7 +7,20 @@
 
 export type Color = 'red' | 'black'
 
-export type StatusKind = 'ongoing' | 'check' | 'checkmate' | 'stalemate' | 'draw'
+/**
+ * 局面状态种类。
+ *
+ * `timeout` 与 `resign` 是**会话层**给出的终局 —— 棋盘上没有任何痕迹能证明
+ * 「谁的表走完了」或「谁认输了」，所以 `xq-core::GameStatus` 里没有它们。
+ */
+export type StatusKind =
+  | 'ongoing'
+  | 'check'
+  | 'checkmate'
+  | 'stalemate'
+  | 'draw'
+  | 'timeout'
+  | 'resign'
 
 /** 局面状态。 */
 export interface StatusDto {
@@ -66,6 +79,13 @@ export interface StateDto {
   legal: MoveOption[]
   last_move: PlayedMove | null
   history: PlayedMove[]
+  /**
+   * 复盘游标：盘面停在「第几手走完」之后（`0` = 开局）。
+   *
+   * 等于 `history.length` 时看的就是最新局面；小于它说明**正在复盘**。
+   * 复盘期间不能落子、不能悔棋 —— 否则会把这一局的记录截断在半路上。
+   */
+  cursor: number
   halfmove_clock: number
   fullmove_number: number
   /** 棋钟。`null` 表示这一局不限时。 */
@@ -196,6 +216,18 @@ export const THINK_MS: Record<DifficultyId, number> = {
   l4: 2_000,
   l5: 3_000,
 }
+
+/**
+ * 赛后「深度分析」用的档位与每手思考时间。
+ *
+ * 档位取「高级」而不是当前的走棋档位：评价定级的依据是 `root_moves` 的准确度，
+ * 拿弱档位的评分去定级，等级本身就是不准的（与走棋后的即时讲解同一个理由）。
+ *
+ * 时间是**折中**：即时讲解每手给 2000 毫秒无所谓（一局只算最后一步），
+ * 但整局重算要算几十手 —— 2000 毫秒 × 60 手 = 两分钟，没人等得下去。
+ */
+export const DEEP_LEVEL: DifficultyId = 'l4'
+export const DEEP_THINK_MS = 800
 
 // ---------------------------------------------------------------- 走子动画
 

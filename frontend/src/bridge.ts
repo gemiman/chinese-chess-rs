@@ -19,6 +19,7 @@
 
 import type {
   CoachResponse,
+  Color,
   DifficultyId,
   EngineMoveResponse,
   HintResponse,
@@ -45,6 +46,19 @@ export interface EngineBridge {
   hint(level: DifficultyId, thinkMs: number, count: number): Promise<HintResponse>
   /** 生成最后一步的战法讲解。 */
   coach(level: DifficultyId, thinkMs: number): Promise<CoachResponse>
+  /** 复盘：把盘面挪到第 `ply` 手之后（`0` = 开局）。 */
+  seek(ply: number): Promise<StateResponse>
+  /** 认输。 */
+  resign(loser: Color): Promise<StateResponse>
+  /**
+   * 当场结算超时（如果确实到点了）。
+   *
+   * 超时不能只在「有人试着走棋」时才发现 —— 那样玩家盯着一个已经走到 0 的钟，
+   * 什么都不会发生。棋钟归零时由前端调它，超时才当场生效。
+   */
+  settle(): Promise<StateResponse>
+  /** 赛后深度分析：重算第 `ply` 手的讲解。**每次调用都含一次搜索**，很慢。 */
+  analyze(ply: number, level: DifficultyId, thinkMs: number): Promise<CoachResponse>
 }
 
 const BASE = '/api'
@@ -99,6 +113,12 @@ export const httpBridge: EngineBridge = {
   engineMove: (level, thinkMs) => request<EngineMoveResponse>('/engine', { level, think_ms: thinkMs }),
   hint: (level, thinkMs, count) => request<HintResponse>('/hint', { level, think_ms: thinkMs, count }),
   coach: (level, thinkMs) => request<CoachResponse>('/coach', { level, think_ms: thinkMs }),
+  seek: (ply) => request<StateResponse>('/seek', { ply }),
+  resign: (loser) => request<StateResponse>('/resign', { loser }),
+  // 同 undo：必须显式传一个空对象，否则会被发成 GET
+  settle: () => request<StateResponse>('/settle', {}),
+  analyze: (ply, level, thinkMs) =>
+    request<CoachResponse>('/analyze', { ply, level, think_ms: thinkMs }),
 }
 
 // ---------------------------------------------------------------- Tauri 实现
@@ -150,6 +170,11 @@ export const tauriBridge: EngineBridge = {
   hint: (level, thinkMs, count) =>
     invoke!<HintResponse>('hint', { level, thinkMs, count }),
   coach: (level, thinkMs) => invoke!<CoachResponse>('coach', { level, thinkMs }),
+  seek: (ply) => invoke!<StateResponse>('seek', { ply }),
+  resign: (loser) => invoke!<StateResponse>('resign', { loser }),
+  settle: () => invoke!<StateResponse>('settle'),
+  analyze: (ply, level, thinkMs) =>
+    invoke!<CoachResponse>('analyze', { ply, level, thinkMs }),
 }
 
 /**

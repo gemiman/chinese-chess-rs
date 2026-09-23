@@ -37,15 +37,31 @@ export function TacticReveal({ note }: { note: CoachNote | null }) {
   // 用「第几手 + 战法名」当键，同一步重复渲染不会重播
   const played = useRef<string | null>(null)
 
+  // 什么时候**出场**：只在换了一手值得出场的战法时触发一次。
   useEffect(() => {
     const name = notableTactic(note)
     const id = note === null || name === null ? null : `${note.ply}:${name}`
     if (name === null || id === played.current) return
     played.current = id
     setShown({ name, id: Date.now() })
+  }, [note])
+
+  // 什么时候**退场**：只跟 `shown` 走，跟讲解没关系。
+  //
+  // ⚠️ 这段计时**绝不能**写进上面那个 effect。写进去的话，cleanup 会在 `note`
+  // 一变时就把 `clearTimeout` 掉 —— 而「下一步没有值得出场的战法」恰恰是最常见的
+  // 情况（精彩的杀着之后往往跟一步闲着），那条分支直接 `return`，不会重设计时器。
+  // 结果就是**这一层永远卸不掉**：遮罩早已淡回透明，可容器自己还有一块不透明的
+  // 深色底压着，棋盘整块变黑，而且再也回不来。
+  //
+  // 这个 bug 用户真的撞上了：走一步妙手、对方随手一应，棋盘就黑了。
+  // 而且它**极难在测试里复现** —— 得让下一步的讲解在那 2.5 秒之内到达
+  // 而且那一步恰好没有战法可讲。
+  useEffect(() => {
+    if (shown === null) return
     const timer = window.setTimeout(() => setShown(null), REVEAL_MS)
     return () => window.clearTimeout(timer)
-  }, [note])
+  }, [shown])
 
   if (shown === null) return null
 

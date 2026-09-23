@@ -260,6 +260,116 @@ impl AppState {
         };
         Ok((note, info))
     }
+
+    /// 赛后「深度分析」：把盘面摆到第 `ply` 手之后，重算那一手的讲解。
+    ///
+    /// 与 [`AppState::coach_last_move`] 只差一步 —— **算之前先把盘面挪过去**。
+    /// 没有合成一个方法，是因为时序约束完全不同：这里必须自己保证
+    /// 「算完把游标还回原处」，否则复盘页会因为一次后台分析突然跳到别的位置。
+    ///
+    /// 分析一局棋要逐手调用它。这比 [`AppState::coach_last_move`] 慢得多 ——
+    /// 全局几十手就是几十次搜索 —— 所以它只服务于「深度分析」这一个入口，
+    /// 绝不能被走棋路径碰到（docs/05 §6.5：走子后立即返回，讲解异步后到）。
+    pub fn analyze_ply(
+        &self,
+        ply: usize,
+        level: Difficulty,
+        think_ms: u64,
+    ) -> Result<(xq_coach::CoachNote, EngineInfo), String> {
+        let restored = self.with_game(|game| game.cursor());
+
+        // ① 短锁：挪盘面 + 取走那一手的上下文
+        let context = self.with_game(|game| {
+            game.seek(ply)?;
+            game.last_move_context()
+                .ok_or_else(|| format!("第 {ply} 手不存在"))
+        });
+
+        // ② 锁外搜索与讲解（长耗时，不能占着 game 锁，否则界面整个卡住）
+        let outcome = match context {
+            Ok((mut pos_before, mv, history)) => {
+                let ply_no = history.len() as u16;
+                let started = Instant::now();
+                let (result, _) = self.run_search(&mut pos_before, level, think_ms);
+                let elapsed = started.elapsed().as_millis() as u64;
+
+                let ctx = GameContext {
+                    history_iccs: &history,
+                    ply: ply_no,
+                    verbosity: Verbosity::Standard,
+                };
+                let note = self
+                    .coach
+                    .analyze(&pos_before, mv, &result.root_moves, &ctx);
+
+                Ok((
+                    note,
+                    EngineInfo {
+                        level: level.id().to_string(),
+                        level_label: level.label().to_string(),
+                        depth: result.depth,
+                        score: result.score,
+                        nodes: result.nodes,
+                        mate_in: result.mate_distance(),
+                        stopped: result.stopped,
+                        think_ms: elapsed,
+                    },
+                ))
+            }
+            Err(e) => Err(e),
+        };
+
+        // ③ 无论成败都把游标还回去。
+        // 「分析失败之后棋盘莫名停在第 N 手」是最难查的那类问题：功能看着是好的，
+        // 只是位置错了。宁可在这里多写一行。
+        self.with_game(|game| {
+            let _ = game.seek(restored);
+        });
+
+        outcome
+    }
+
+    /// 复盘：把盘面挪到第 `ply` 手之后，返回挪完的快照。
+    ///
+    /// 两个宿主都只是把它包进各自的响应类型里 —— 盘面怎么摆是会话层的事。
+    pub fn seek(&self, ply: usize) -> Result<StateDto, String> {
+        self.with_game(|game| {
+            game.seek(ply)?;
+            Ok(game.build_dto())
+        })
+    }
+
+    /// 认输。`loser` 是 DTO 里那套颜色字（`"red"` / `"black"`）。
+    pub fn resign(&self, loser: &str) -> Result<StateDto, String> {
+        let color = color_from_word(loser)?;
+        self.with_game(|game| {
+            game.resign(color)?;
+            Ok(game.build_dto())
+        })
+    }
+
+    /// 当场结算超时（如果确实到点了），返回最新局面。
+    ///
+    /// 前端在自己的倒计时归零时调它。没到点就原样返回 —— 调用方看 `status`
+    /// 就知道该不该跳到分析页，不需要另外判断。
+    pub fn settle_timeout(&self) -> StateDto {
+        self.with_game(|game| {
+            game.settle_timeout();
+            game.build_dto()
+        })
+    }
+}
+
+/// DTO 里的颜色字 → 枚举。
+///
+/// 解析收在会话层，与坐标解析同理：两个宿主要是各写一遍，就会出现
+/// 「浏览器里能认输、桌面端点下去报「未知颜色」」这种两边不一致的问题。
+fn color_from_word(word: &str) -> Result<Color, String> {
+    match word {
+        "red" => Ok(Color::Red),
+        "black" => Ok(Color::Black),
+        other => Err(format!("未知的颜色：{other}（应为 red 或 black）")),
+    }
 }
 
 impl Default for AppState {
@@ -271,9 +381,17 @@ impl Default for AppState {
 /// 一局对局。
 pub struct Game {
     pos: Position,
+    /// 开局局面。复盘回退后要重建盘面时得从它出发 ——
+    /// 只靠 `pos` 自己只能退到开局，退不到「开局之前」。
+    start: Position,
     /// 已走着的完整记录（含走子前算好的记谱）。
+    ///
+    /// 复盘**不会**截断它：`log` 是这一局的完整记录，`pos` 只是它的一段视图。
     log: Vec<PlayedMove>,
-    /// 上一着。
+    /// 复盘游标：当前 `pos` 对应「`log[..cursor]` 全部走完」之后的局面。
+    /// `cursor == log.len()` 表示看的正是最新局面。
+    cursor: usize,
+    /// 上一着。跟着游标走 —— 复盘到第 5 手，它就是第 5 手。
     last: Option<PlayedMove>,
     /// 棋钟。`None` 表示不限时。
     clock: Option<Clock>,
@@ -282,6 +400,8 @@ pub struct Game {
     /// 超时**不是**规则产生的终局，所以不能塞进 `xq-core::GameStatus`
     /// —— 内核只认棋盘上的事实，不认「谁的表走完了」。
     timeout: Option<Timeout>,
+    /// 认输方。与超时同理：局面看着完全正常，只能由会话层给出。
+    resigned: Option<Color>,
 }
 
 impl Default for Game {
@@ -292,12 +412,16 @@ impl Default for Game {
 
 impl Game {
     pub fn new() -> Self {
+        let start = Position::startpos();
         Self {
-            pos: Position::startpos(),
+            pos: start.clone(),
+            start,
             log: Vec::new(),
+            cursor: 0,
             last: None,
             clock: None,
             timeout: None,
+            resigned: None,
         }
     }
 
@@ -363,22 +487,32 @@ impl Game {
     /// 讲解必须拿**走子前**的局面算 —— 记谱、战术识别、吃子判定全都依赖它。
     /// 做法是把最后一步从当前局面上撤掉，而不是另存快照：这样只有一个真相源，
     /// 不会出现「快照与棋盘不同步」的隐蔽 bug。
+    ///
+    /// ⚠️ 序列取到**游标**为止，而不是整个 `log`：复盘到第 2 手时如果把后面
+    /// 还没走的手也交出去，讲解会「预知未来」—— 开局定式识别与重复局面判断
+    /// 都会得出当时根本不可能得出的结论。
     pub fn last_move_context(&self) -> Option<(Position, Move, Vec<String>)> {
         let record = *self.pos.move_stack().last()?;
         let mut before = self.pos.clone();
         before.unmake_move()?;
 
-        // 开局匹配看的是**含本步在内**的完整序列 —— 定式刚好走完时才能被识别出来
-        let history: Vec<String> = self.log.iter().map(|entry| entry.iccs.clone()).collect();
+        // 开局匹配看的是**含本步在内**的序列 —— 定式刚好走完时才能被识别出来
+        let history: Vec<String> = self.log[..self.cursor]
+            .iter()
+            .map(|entry| entry.iccs.clone())
+            .collect();
         Some((before, record.mv, history))
     }
 
     pub fn load_fen(&mut self, fen: &str) -> Result<(), String> {
         let pos = Position::from_fen(fen).map_err(|e| e.to_string())?;
+        self.start = pos.clone();
         self.pos = pos;
         self.log.clear();
+        self.cursor = 0;
         self.last = None;
         self.timeout = None;
+        self.resigned = None;
         // 换局面等于换一局，棋钟回到满血重走
         let cfg = self.time_control();
         if !cfg.is_unlimited() {
@@ -389,6 +523,10 @@ impl Game {
 
     /// 走一步。`from` / `to` 是一维索引。
     pub fn apply(&mut self, from: u8, to: u8) -> Result<PlayedMove, String> {
+        // 终局与复盘要先判，再判合法性。反过来的话，一局已经认输的棋里随便点一下
+        // 会得到「a0 → a1 不是合法着法」—— 用户看到的是一句莫名其妙的指责，
+        // 而真正的原因（这局早结束了）一个字都没提。
+        self.ensure_playable()?;
         let Some(mv) = self.pos.legal_move_to(from, to) else {
             return Err(format!(
                 "{} → {} 不是当前局面下的合法着法",
@@ -440,11 +578,29 @@ impl Game {
             .map_err(|e| e.to_string())
     }
 
-    fn apply_move(&mut self, mv: Move) -> Result<PlayedMove, String> {
-        // ⓪ 先结算棋钟。超时的话这一步不算数 —— 钟停、判负，局面保持不动。
+    /// 这一步能不能走：对局是否已结束、盘面是不是停在过去。
+    ///
+    /// 三个公开入口（`apply` / `apply_text` / `apply_move`）都要过这一关。
+    /// 收在一处是为了让**错误消息一致** —— 否则「已经认输的棋里点一下」
+    /// 从坐标入口进来是「不是合法着法」、从记谱入口进来是「对局已结束」，
+    /// 同一件事两种说法，查起来要命。
+    fn ensure_playable(&self) -> Result<(), String> {
         if let Some(t) = self.timeout {
             return Err(format!("对局已因超时结束（{}方负）", t.loser.name_zh()));
         }
+        if let Some(loser) = self.resigned {
+            return Err(format!("对局已因{}方认输结束", loser.name_zh()));
+        }
+        // 复盘时盘面停在过去，这时候落子会把这局的记录截断在半路上
+        if self.cursor != self.log.len() {
+            return Err("正在复盘，先回到最新一手才能继续走子".to_string());
+        }
+        Ok(())
+    }
+
+    fn apply_move(&mut self, mv: Move) -> Result<PlayedMove, String> {
+        self.ensure_playable()?;
+        // ⓪ 先结算棋钟。超时的话这一步不算数 —— 钟停、判负，局面保持不动。
         let side = self.pos.side_to_move();
         if let Some(clock) = self.clock.as_mut() {
             let now = Instant::now();
@@ -484,17 +640,67 @@ impl Game {
         };
         self.last = Some(played.clone());
         self.log.push(played.clone());
+        self.cursor = self.log.len();
+
+        // ④ 这一手把棋下完了（将死 / 困毙 / 和棋）→ **停表**。
+        // 不停的话表会继续走：终局页面上那条钟会一直往下跳，而且之后任何一次
+        // 结算都可能把一个已经结束的对局判成超时，把结果翻过来。
+        if self.pos.status().is_over()
+            && let Some(clock) = self.clock.as_mut()
+        {
+            clock.stop();
+        }
+
         Ok(played)
+    }
+
+    /// 当场结算超时。到点则记下终局并返回负方，否则返回 `None`。
+    ///
+    /// # 为什么需要它
+    ///
+    /// 超时原本**只有在有人试着走棋时**才会被发现 —— 玩家盯着一个已经走到 0 的钟，
+    /// 什么都不会发生，非得再点一下棋盘才会被判负。而那一刻他很可能已经走开去干别的了，
+    /// 于是「超时」这件事永远不会自己发生。前端在自己的倒计时归零时调这个，
+    /// 超时才当场生效。
+    pub fn settle_timeout(&mut self) -> Option<Color> {
+        if self.timeout.is_some() || self.resigned.is_some() {
+            return None;
+        }
+        // 复盘时盘面停在过去，别拿历史局面判超时
+        if self.cursor != self.log.len() {
+            return None;
+        }
+        // 局面本身已经结束就没什么可判的
+        if self.pos.status().is_over() {
+            return None;
+        }
+        let side = self.pos.side_to_move();
+        let clock = self.clock.as_mut()?;
+        if !clock.timed_out(side, Instant::now()) {
+            return None;
+        }
+        clock.stop();
+        self.timeout = Some(Timeout { loser: side });
+        Some(side)
     }
 
     /// 悔一步。棋钟一并回退 —— 否则悔棋就成了「白送回时间」。
     pub fn undo(&mut self) -> bool {
+        // 认输没有对应的着法，撤不掉；否则「认输再悔棋」就能把败局抹掉
+        if self.resigned.is_some() {
+            return false;
+        }
+        // 复盘时不能悔 —— 那一手早就撤过了，再撤一次会把记录截断在半路上
+        if self.cursor != self.log.len() {
+            return false;
+        }
         if self.pos.unmake_move().is_none() {
             return false;
         }
         self.log.pop();
+        self.cursor = self.log.len();
         self.last = self.log.last().cloned();
-        // 悔棋同样撤销超时终局
+        // 悔棋同样撤销超时终局（认输没有「上一步」可撤，所以不撤）
         self.timeout = None;
         if let Some(clock) = self.clock.as_mut() {
             clock.undo();
@@ -503,21 +709,103 @@ impl Game {
         true
     }
 
+    /// 认输。
+    ///
+    /// **认输方由调用方给**，不能取「当前走子方」：人机对战里玩家常在引擎思考时
+    /// 就想认输，那一刻的走子方是引擎。
+    pub fn resign(&mut self, loser: Color) -> Result<(), String> {
+        if self.resigned.is_some() || self.timeout.is_some() {
+            return Err("对局已经结束了".to_string());
+        }
+        if self.cursor != self.log.len() {
+            return Err("正在复盘，先回到最新一手".to_string());
+        }
+        self.resigned = Some(loser);
+        if let Some(clock) = self.clock.as_mut() {
+            clock.stop();
+        }
+        Ok(())
+    }
+
+    /// 复盘游标：当前看的是第几手之后的局面（`0` = 开局）。
+    pub fn cursor(&self) -> usize {
+        self.cursor
+    }
+
+    /// 本局一共走了多少手。
+    pub fn ply_count(&self) -> usize {
+        self.log.len()
+    }
+
+    /// 复盘：把盘面挪到「第 `ply` 手走完」之后。`0` 表示开局。
+    ///
+    /// # 为什么是「从开局重放」而不是「退 N 步」
+    ///
+    /// `Position` 的撤销记录是顺序结构，退到第 N 手要先退掉后面每一步，而且
+    /// 「退错层数」是个会静默跑偏的缺陷 —— 盘面看着正常，只是停在了错误的位置。
+    /// 从 `start` 重放一遍要走的代码路径只有一条，不存在退错的可能。
+    /// 代价是每复盘一手要重放一遍；一局象棋最多两三百手，可以忽略。
+    ///
+    /// # 为什么不截断 `log`
+    ///
+    /// `log` 是这一局的完整记录，`pos` 只是它的一段视图。截断了就只能往前翻、
+    /// 翻不回来，复盘也就废了。
+    pub fn seek(&mut self, ply: usize) -> Result<(), String> {
+        if ply > self.log.len() {
+            return Err(format!("第 {ply} 手不存在（本局共 {} 手）", self.log.len()));
+        }
+        if ply == self.cursor {
+            return Ok(());
+        }
+
+        // 复盘是「看」不是「下」：离开最新一手就把表停住，回到最新一手再续上。
+        // 宁可少算，也绝不能因为用户在翻棋谱就判谁超时。
+        if let Some(clock) = self.clock.as_mut() {
+            if ply == self.log.len() {
+                clock.start(Instant::now());
+            } else {
+                clock.stop();
+            }
+        }
+
+        self.pos = self.start.clone();
+        for record in &self.log[..ply] {
+            let from = xq_core::from_iccs(&record.from)
+                .ok_or_else(|| format!("记录里的坐标无法解析：{}", record.from))?;
+            let to = xq_core::from_iccs(&record.to)
+                .ok_or_else(|| format!("记录里的坐标无法解析：{}", record.to))?;
+            // 这些着法当初都是按规则走出来的，重放无需再校验一次
+            self.pos.make_move_unchecked(Move::new(from, to));
+        }
+
+        self.cursor = ply;
+        self.last = ply.checked_sub(1).map(|i| self.log[i].clone());
+        Ok(())
+    }
+
     /// 组装前端需要的完整状态。
     pub fn build_dto(&mut self) -> StateDto {
-        // 超时优先：它是「非规则终局」，棋盘上未必看得出，只能由会话层给出
-        let status_dto = match self.timeout {
-            Some(t) => StatusDto::timeout(t.loser),
-            None => StatusDto::from(self.pos.status(), &mut self.pos),
+        // 会话层产生的终局优先：它们**不是棋盘上的事实**，棋盘上未必看得出，
+        // 只能由这里给出。认输排在超时前面 —— 能认输说明还没超时判负。
+        let status_dto = match (self.resigned, self.timeout) {
+            (Some(loser), _) => StatusDto::resign(loser),
+            (None, Some(t)) => StatusDto::timeout(t.loser),
+            (None, None) => StatusDto::from(self.pos.status(), &mut self.pos),
         };
 
         // 棋钟快照。顺带 start()：玩家第一次看到这个局面，就是他开始用时的时刻。
         // 重复调用是空操作，不会把起点冲掉。
+        //
+        // ⚠️ 终局之后与复盘期间**不能**再 start() —— `seek` 特意把表停了，
+        // 这里若无条件续上，复盘时表就一直在空转，翻回最新一手还会多算一截。
         let to_move = self.pos.side_to_move();
+        let live = self.cursor == self.log.len() && !status_dto.over;
         let clock_dto = match self.clock.as_mut() {
             Some(clock) => {
                 let now = Instant::now();
-                clock.start(now);
+                if live {
+                    clock.start(now);
+                }
                 Some(clock.snapshot(to_move, now))
             }
             None => None,
@@ -572,6 +860,7 @@ impl Game {
             legal,
             last_move: self.last.clone(),
             history: self.log.clone(),
+            cursor: self.cursor,
             halfmove_clock: self.pos.halfmove_clock(),
             fullmove_number: self.pos.fullmove_number(),
             clock: clock_dto,
@@ -645,6 +934,9 @@ pub struct StateDto {
     pub legal: Vec<MoveOption>,
     pub last_move: Option<PlayedMove>,
     pub history: Vec<PlayedMove>,
+    /// 复盘游标：盘面停在「第几手走完」之后（`0` = 开局）。
+    /// 等于 `history.len()` 时看的就是最新局面；小于它说明正在复盘。
+    pub cursor: usize,
     pub halfmove_clock: u16,
     pub fullmove_number: u16,
     /// 棋钟。`null` 表示这一局不限时。
@@ -670,6 +962,20 @@ impl StatusDto {
         Self {
             kind: "timeout".to_string(),
             text: format!("{}方超时，判负", loser.name_zh()),
+            over: true,
+            loser: Some(color_word(loser).to_string()),
+        }
+    }
+
+    /// 认输。与超时同理：棋盘上没有任何痕迹能证明「谁认输了」。
+    fn resign(loser: Color) -> Self {
+        Self {
+            kind: "resign".to_string(),
+            text: format!(
+                "{}方认输，{}方胜",
+                loser.name_zh(),
+                loser.opponent().name_zh()
+            ),
             over: true,
             loser: Some(color_word(loser).to_string()),
         }
@@ -915,5 +1221,200 @@ mod tests {
             .err()
             .expect("车穿不过自己的兵");
         assert!(err.contains("不是当前局面下的合法着法"), "实际：{err}");
+    }
+
+    /// 开局四步，供复盘相关的测试共用。
+    ///
+    /// 挑的是「不互相干扰」的四步：右侧炮平中、黑马跳正、红马跳正、黑车退一。
+    /// 注意象棋记谱里马/相/仕的「进三」指的是**目标纵线**而非步数，
+    /// 所以「傌二进三」落在 h 线 —— 写成 `h0 → g2`。
+    const OPENING: [(&str, &str); 4] = [("h2", "e2"), ("h9", "g7"), ("h0", "g2"), ("i9", "i8")];
+
+    fn game_with_opening() -> Game {
+        let mut game = Game::new();
+        for (from, to) in OPENING {
+            game.apply_iccs(from, to)
+                .unwrap_or_else(|e| panic!("测试着法 {from}{to} 应当合法：{e}"));
+        }
+        game
+    }
+
+    /// 复盘的核心契约：**任意手数的局面都能重现，且记录不被截断。**
+    ///
+    /// 这是「复盘」功能的地基。它同时锁住三件事：
+    /// ① 退回去的局面必须与「当初只走到那里」时逐字节相同；
+    /// ② `log` 不能因为复盘被砍短 —— 砍短了就翻不回来；
+    /// ③ 上一着要跟着游标走，否则棋盘上高亮的是终局那一步。
+    #[test]
+    fn seek_replays_the_game_to_any_ply() {
+        let mut game = game_with_opening();
+        let at_four = game.build_dto().fen;
+        assert_eq!(game.ply_count(), 4);
+
+        // 退到第 2 手
+        game.seek(2).expect("应当能退到第 2 手");
+        let mut two_moves = Game::new();
+        for (from, to) in &OPENING[..2] {
+            two_moves.apply_iccs(from, to).unwrap();
+        }
+        assert_eq!(game.cursor(), 2);
+        assert_eq!(game.build_dto().fen, two_moves.build_dto().fen);
+        assert_eq!(
+            game.build_dto()
+                .last_move
+                .expect("第 2 手之后应有上一着")
+                .iccs,
+            "h9g7"
+        );
+
+        // 记录不能因为复盘被截断
+        assert_eq!(game.ply_count(), 4);
+        assert_eq!(game.build_dto().history.len(), 4);
+
+        // 退到开局：上一着应当为空
+        game.seek(0).unwrap();
+        assert_eq!(game.build_dto().fen, Game::new().build_dto().fen);
+        assert!(game.build_dto().last_move.is_none());
+
+        // 翻回最新一手：必须与复盘前完全一致
+        game.seek(4).unwrap();
+        assert_eq!(game.build_dto().fen, at_four);
+        assert_eq!(game.cursor(), 4);
+        assert!(game.build_dto().last_move.is_some());
+    }
+
+    /// 复盘时不能落子 —— 否则会把这一局的记录截断在半路上。
+    #[test]
+    fn moves_are_blocked_while_reviewing() {
+        let mut game = game_with_opening();
+        game.seek(1).unwrap();
+        assert!(game.apply_iccs("h9", "g7").is_err(), "复盘期间不应允许落子");
+
+        // 回到最新一手就能接着走（車九进一）
+        game.seek(4).unwrap();
+        assert!(game.apply_iccs("a0", "a1").is_ok());
+    }
+
+    /// 手数越界要报错，不能悄悄把盘面停在半路上。
+    #[test]
+    fn seek_rejects_a_ply_beyond_the_record() {
+        let mut game = game_with_opening();
+        assert!(game.seek(5).is_err(), "本局只有 4 手，第 5 手应当报错");
+        assert!(game.seek(4).is_ok());
+    }
+
+    /// 从**加载的 FEN** 复盘：重放的起点必须是 `load_fen` 那个局面，
+    /// 而不是标准开局 —— 否则整个复盘从第一步就是错的。
+    #[test]
+    fn seek_replays_from_a_loaded_fen() {
+        let fen = "1nbakabnr/9/1c5c1/2p1p1p1p/r8/9/2P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1";
+        let mut game = Game::new();
+        game.load_fen(fen).expect("这个 FEN 应当能解析");
+        let start = game.build_dto().fen;
+
+        game.apply_iccs("h0", "g2").expect("傌二进三应当合法");
+        let after = game.build_dto().fen;
+
+        game.seek(0).unwrap();
+        assert_eq!(game.build_dto().fen, start, "退到开局应回到加载的那个局面");
+        game.seek(1).unwrap();
+        assert_eq!(game.build_dto().fen, after);
+    }
+
+    /// 认输要真的终局：状态是 `resign`、负方正确、之后走不了子，也撤不掉。
+    #[test]
+    fn resign_ends_the_game_and_cannot_be_taken_back() {
+        let mut game = game_with_opening();
+        game.resign(Color::Black).expect("应当能认输");
+
+        let dto = game.build_dto();
+        assert_eq!(dto.status.kind, "resign");
+        assert!(dto.status.over);
+        assert_eq!(dto.status.loser.as_deref(), Some("black"));
+
+        assert!(game.apply_iccs("h0", "g2").is_err(), "终局后不应允许落子");
+        assert!(!game.undo(), "认输撤不掉");
+        assert!(game.resign(Color::Red).is_err(), "不该能认输两次");
+    }
+
+    /// 超时要能**当场**判负 —— 不能等下一次落子才发现。
+    ///
+    /// 原来的行为是：钟走到 0 之后什么都不会发生，玩家得再点一下棋盘，
+    /// 而那一刻（落子被拒）才发现自己早就超时了。这一条把「当场生效」固定下来。
+    #[test]
+    fn settle_timeout_ends_the_game_without_a_move() {
+        let mut game = Game::new_with_clock(TimeControl {
+            base_secs: 60,
+            // 1 秒是配置的粒度下限；这个测试只等一秒多，代价可以接受
+            step_secs: 1,
+            byoyomi_secs: 0,
+        });
+
+        // 刚开始查：还没到点，局面照旧
+        assert!(game.settle_timeout().is_none(), "刚开局不该判超时");
+        assert_eq!(game.build_dto().status.kind, "ongoing");
+
+        std::thread::sleep(std::time::Duration::from_millis(1_100));
+
+        assert_eq!(game.settle_timeout(), Some(Color::Red));
+        let dto = game.build_dto();
+        assert_eq!(dto.status.kind, "timeout");
+        assert_eq!(dto.status.loser.as_deref(), Some("red"));
+
+        // 判过之后不会重复判，也走不了子
+        assert!(game.settle_timeout().is_none());
+        assert!(game.apply_iccs("h2", "e2").is_err(), "终局后不该允许落子");
+    }
+
+    /// 重开要把认输与复盘游标一并清掉 —— 否则新的一局开局就是「已认输」。
+    #[test]
+    fn reset_clears_resignation_and_cursor() {
+        let mut game = game_with_opening();
+        game.seek(1).unwrap();
+        game.seek(4).unwrap();
+        game.resign(Color::Red).unwrap();
+
+        game.reset();
+        let dto = game.build_dto();
+        assert_eq!(dto.status.kind, "ongoing");
+        assert_eq!(dto.cursor, 0);
+        assert!(dto.history.is_empty());
+        assert!(dto.last_move.is_none());
+    }
+
+    /// 赛后逐手重算：**算完必须把游标还回原处**。
+    ///
+    /// 这条约束没写在类型里，只能靠测试守。一旦破掉，表现是「复盘页面自己
+    /// 跳到别的手数」—— 棋盘与手数对不上，但每一步单独看又都是对的。
+    #[test]
+    fn analyze_ply_restores_the_cursor() {
+        let state = AppState::new();
+        for (from, to) in OPENING {
+            state
+                .with_game(|game| game.apply_iccs(from, to))
+                .expect("测试着法应当合法");
+        }
+
+        // 复盘到第 2 手时分析第 2 手：讲的是第 2 手，游标不动
+        state.with_game(|game| game.seek(2)).unwrap();
+        let (note, _) = state
+            .analyze_ply(2, Difficulty::L1, 100)
+            .expect("应当能分析第 2 手");
+        assert_eq!(note.ply, 2, "讲解应对应第 2 手");
+        assert_eq!(state.with_game(|game| game.cursor()), 2);
+
+        // 分析一个**和游标不同**的手数：同样不能把游标带走
+        state
+            .analyze_ply(4, Difficulty::L1, 100)
+            .expect("应当能分析第 4 手");
+        assert_eq!(
+            state.with_game(|game| game.cursor()),
+            2,
+            "后台分析不该挪动用户正在看的位置"
+        );
+
+        // 越界的手数要报错，且报错之后游标仍在原处
+        assert!(state.analyze_ply(99, Difficulty::L1, 100).is_err());
+        assert_eq!(state.with_game(|game| game.cursor()), 2);
     }
 }

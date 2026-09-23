@@ -20,6 +20,21 @@
  * ```
  *
  * 退出码 0 = 全部通过；1 = 有用例失败。
+ *
+ * # 界面对不上时该改这里，不是改产品
+ *
+ * 这个脚本的价值全在于**它盯的是用户真看得见的东西**。所以选择器变了就该跟着改，
+ * 不能为了让它好写而给产品加测试专用的 class 或 id —— 那样它测的就不再是
+ * 用户看到的界面了。
+ *
+ * # 覆盖范围（对应三页结构）
+ *
+ *   设置页 → 开局
+ *   对局页 → 棋盘渲染 / 选中 / 落点 / 落子 / 悔棋 / 记谱浮层 / 一屏不滚动
+ *   终局   → 认输自动跳转
+ *   分析页 → 结果 / 统计 / 逐手讲解 / 深度分析
+ *   复盘   → 跳回对局页、复盘条翻手数
+ *   人机   → 引擎自动应招 / 提示浮层给 3 条候选
  */
 
 const CDP_PORT = Number(process.env.CDP_PORT ?? 9222)
@@ -31,14 +46,13 @@ const CDP = `http://127.0.0.1:${CDP_PORT}`
 const ORIGIN = new URL(PAGE_URL).origin
 
 /**
- * 视口必须比棋盘大。
+ * 视口必须比棋盘大，而且要**高度真实**。
  *
- * 无头 Chrome 的默认视口只有 762×484，而棋盘是 560×620 —— 底部的棋子
- * （`row` 0..2 那几排）会落在视口外。此时点击事件的坐标虽然在页面坐标系里
- * 算得对，浏览器却根本不会把它派发到那个位置，表现为「点了没反应」。
- * 这个坑踩过一次，所以这里显式设定。
+ * 无头 Chrome 的默认视口只有 762×484，而棋盘是按视口高度反推尺寸的 ——
+ * 太矮的话棋盘会小得点不准，而且「一屏不滚动」这条根本测不出来。
+ * 1280×900 是一台普通笔记本的窗口尺寸，正好是这条约束最该被验证的地方。
  */
-const VIEWPORT = { width: 1280, height: 1100 }
+const VIEWPORT = { width: 1280, height: 900 }
 
 // 与 frontend/src/coords.ts 保持一致
 const MARGIN = 40
@@ -51,10 +65,10 @@ let failures = 0
 
 function check(label, ok, detail = '') {
   if (ok) {
-    console.log(`  \u2713 ${label}`)
+    console.log(`  ✓ ${label}`)
   } else {
     failures += 1
-    console.log(`  \u2717 ${label}${detail ? ` —— ${detail}` : ''}`)
+    console.log(`  ✗ ${label}${detail ? ` —— ${detail}` : ''}`)
   }
 }
 
@@ -73,6 +87,13 @@ async function resetGame() {
   if (!res.ok) {
     throw new Error(`复位局面失败（HTTP ${res.status}）。桥接服务起来了吗？`)
   }
+}
+
+/** 读一次服务端局面。界面上的东西要跟它对上，才说明前端没在自说自话。 */
+async function apiState() {
+  const res = await fetch(`${ORIGIN}/api/state`)
+  if (!res.ok) throw new Error(`取局面失败（HTTP ${res.status}）`)
+  return res.json()
 }
 
 /** 建一个新标签页并返回其 CDP 连接。 */
@@ -178,6 +199,59 @@ async function typeText(client, text) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
+/** 等某个选择器出现。找到返回 true，超时返回 false。 */
+async function waitFor(client, selector, tries = 60) {
+  for (let i = 0; i < tries; i += 1) {
+    if (await evaluate(client, `!!document.querySelector(${JSON.stringify(selector)})`)) {
+      return true
+    }
+    await sleep(100)
+  }
+  return false
+}
+
+/**
+ * 点一个按钮，按**可见文字**找。
+ *
+ * 按文字找而不是按 class 找，是为了让选择器尽量贴近用户看到的东西：
+ * class 会随重构改，文字改了才是真的改了产品。
+ */
+async function clickButton(client, scope, text) {
+  return evaluate(
+    client,
+    `(() => {
+      const root = document.querySelector(${JSON.stringify(scope)});
+      if (!root) return 'no-scope';
+      const btn = [...root.querySelectorAll('button')].find(
+        (b) => b.textContent.trim() === ${JSON.stringify(text)},
+      );
+      if (!btn) return 'not-found';
+      if (btn.disabled) return 'disabled';
+      btn.click();
+      return 'ok';
+    })()`,
+  )
+}
+
+/** 从设置页开局并进入对局页。 */
+async function startGame(client) {
+  const clicked = await clickButton(client, '.setup__start', '开始游戏')
+  if (clicked !== 'ok') return clicked
+  await waitFor(client, '.board')
+  await sleep(300)
+  return 'ok'
+}
+
+/** 走一步：先点起点再点终点。 */
+async function playMove(client, fromCol, fromRow, toCol, toRow) {
+  const a = await evaluate(client, squareExpression(fromCol, fromRow))
+  await clickAt(client, a.x, a.y)
+  await sleep(220)
+  const b = await evaluate(client, squareExpression(toCol, toRow))
+  await clickAt(client, b.x, b.y)
+  await sleep(500)
+}
+
 async function main() {
   console.log(`ui_probe: 复位局面 → 打开 ${PAGE_URL}`)
   await resetGame()
@@ -192,26 +266,78 @@ async function main() {
     mobile: false,
   })
 
-  // 等应用挂载并完成首次 /api/state 拉取
-  for (let i = 0; i < 60; i += 1) {
-    const ready = await evaluate(client, `!!document.querySelector('.board')`)
-    if (ready) break
-    await sleep(100)
+  // 等应用挂载并完成首次 /api/state 拉取（首屏是设置页）
+  const setupReady = await waitFor(client, '.setup__start')
+  if (!setupReady) {
+    console.error('ui_probe: 设置页没渲染出来，后面都测不了')
+    client.close()
+    process.exit(1)
   }
   await sleep(200)
 
-  console.log('\n[1] 初始渲染')
+  console.log('\n[1] 设置页应给出全部开局选项')
+  const setup = await evaluate(
+    client,
+    `({
+      cards: [...document.querySelectorAll('.setup__grid .card__title')].map((t) => t.textContent.trim()),
+      segments: ['对局模式', '限时档位', '走子动画速度'].map((name) => !!document.querySelector('[aria-label="' + name + '"]')),
+      startDisabled: document.querySelector('.setup__start .btn')?.disabled ?? null,
+      hash: location.hash,
+    })`,
+  )
+  check('设置页在 #/setup', setup.hash === '#/setup', `实际 ${setup.hash}`)
+  check(
+    '列出了模式 / 限时 / 速度',
+    ['对局模式', '限时', '走子速度'].every((t) => setup.cards.includes(t)),
+    `实际 ${setup.cards.join('、')}`,
+  )
+  check('三组选择器都可操作', setup.segments.every(Boolean), `实际 ${JSON.stringify(setup.segments)}`)
+  check('开始游戏按钮可用', setup.startDisabled === false, `disabled=${setup.startDisabled}`)
+  check(
+    '双人模式下不显示「我执哪一方」',
+    !setup.cards.includes('我执哪一方'),
+    '这条选项只对人机对战有意义',
+  )
+
+  console.log('\n[1b] 没有对局时深链到 #/play，应被送回设置页')
+  const histBefore = await evaluate(client, `history.length`)
+  await evaluate(client, `location.hash = '#/play'`)
+  await sleep(600)
+  const fallback = await evaluate(
+    client,
+    `({ hash: location.hash, len: history.length, setup: !!document.querySelector('.setup__start') })`,
+  )
+  check('被送回 #/setup', fallback.hash === '#/setup', `实际 ${fallback.hash}`)
+  check('显示的仍是设置页', fallback.setup === true)
+  // 兜底跳转用的是「替换」而不是「新开一条」。用新开的话这里会多出 2 条记录，
+  // 而多出来的那条正是 #/play —— 按后退键会被送回 #/play、再被送回 #/setup，
+  // 来回弹，永远退不出去。
+  check(
+    '兜底跳转没有多留一条历史记录',
+    fallback.len <= histBefore + 1,
+    `history ${histBefore} → ${fallback.len}`,
+  )
+
+  console.log('\n[2] 开始游戏 → 对局页，且**一屏放得下、不滚动**')
+  const started = await startGame(client)
+  check('点击开始游戏后进入对局页', started === 'ok', String(started))
+
   const board = await evaluate(
     client,
     `(() => {
       const b = document.querySelector('.board');
       if (!b) return null;
       const r = b.getBoundingClientRect();
+      const bar = document.querySelector('.play__bar');
       return {
         width: Math.round(r.width),
         height: Math.round(r.height),
         pieces: document.querySelectorAll('.piece').length,
         boardImg: !!document.querySelector('.board__surface'),
+        hash: location.hash,
+        docScroll: document.documentElement.scrollHeight,
+        winH: window.innerHeight,
+        barBottom: bar ? Math.round(bar.getBoundingClientRect().bottom) : null,
       };
     })()`,
   )
@@ -220,6 +346,7 @@ async function main() {
     client.close()
     process.exit(1)
   }
+  check('URL 变成 #/play', board.hash === '#/play', `实际 ${board.hash}`)
   check('棋子 32 枚', board.pieces === 32, `实际 ${board.pieces}`)
   check('棋盘底图已加载', board.boardImg)
 
@@ -230,8 +357,19 @@ async function main() {
     Math.abs(actualRatio - expectedRatio) < 0.01,
     `实际 ${actualRatio.toFixed(3)}（宽高比不对会导致棋子与格线错位）`,
   )
+  // 这条是对局页的硬约束：要滚动才能看见自己的时间，这盘就没法下了
+  check(
+    '页面没有滚动条',
+    board.docScroll <= board.winH,
+    `文档高 ${board.docScroll} > 视口 ${board.winH}`,
+  )
+  check(
+    '按钮行在视口之内',
+    board.barBottom !== null && board.barBottom <= board.winH,
+    `按钮行底部 ${board.barBottom} / 视口 ${board.winH}`,
+  )
 
-  console.log('\n[2] 点击红炮 h2 应选中并高亮 12 个落点')
+  console.log('\n[3] 点击红炮 h2 应选中并高亮 12 个落点')
   const h2 = await evaluate(client, squareExpression(7, 2))
   await clickAt(client, h2.x, h2.y)
   await sleep(250)
@@ -240,23 +378,27 @@ async function main() {
     client,
     `({
       selected: document.querySelectorAll('.piece--selected').length,
-      dots: document.querySelectorAll('.marker--dot').length,
-      rings: document.querySelectorAll('.marker--ring').length,
+      moves: document.querySelectorAll('.fx img[src*="fx-move"]').length,
+      captures: document.querySelectorAll('.fx img[src*="fx-capture"]').length,
+      selectRing: document.querySelectorAll('.fx img[src*="fx-select"]').length,
       chips: document.querySelectorAll('.hint-chip').length,
-      banner: document.querySelector('.status__text')?.textContent ?? '',
     })`,
   )
   check('恰好一枚棋子被选中', afterSelect.selected === 1, `实际 ${afterSelect.selected}`)
-  check('侧栏出现走棋提示', afterSelect.chips === 12, `期望 12 条，实际 ${afterSelect.chips}`)
+  check('选中环画出来了', afterSelect.selectRing === 1, `实际 ${afterSelect.selectRing}`)
   check(
-    '棋盘上有落点标记（点 + 环）',
-    afterSelect.dots + afterSelect.rings === 12,
-    `点 ${afterSelect.dots} + 环 ${afterSelect.rings}`,
+    '棋盘上有 12 个落点标记',
+    afterSelect.moves + afterSelect.captures === 12,
+    `空格 ${afterSelect.moves} + 可吃 ${afterSelect.captures}`,
   )
-
   // h2 红炮在初始局面有 12 步，其中只有 h9 是吃子
   // （隔 h7 黑炮吃 h9 黑马 —— 黑方底线是 rnbakabnr，h9 是马、i9 才是车）
-  check('落点中含 1 个可吃标记', afterSelect.rings === 1, `实际 ${afterSelect.rings}`)
+  check('落点中含 1 个可吃标记', afterSelect.captures === 1, `实际 ${afterSelect.captures}`)
+  check(
+    '对局页不放提示条（提示改在浮层里）',
+    afterSelect.chips === 0,
+    `实际 ${afterSelect.chips} 条`,
+  )
 
   // 截图放在这里：此时正是「已选中 + 落点全部高亮」的状态，最能看出标记层对不对
   if (SHOT_PATH) {
@@ -266,111 +408,71 @@ async function main() {
     console.log(`\n  （截图已保存：${SHOT_PATH}）`)
   }
 
-  console.log('\n[3] 点击 e2 应落子并更新记谱')
+  console.log('\n[4] 点击 e2 应落子，界面与服务端都要更新')
   const e2 = await evaluate(client, squareExpression(4, 2))
   await clickAt(client, e2.x, e2.y)
-  await sleep(400)
+  await sleep(500)
 
   const afterMove = await evaluate(
     client,
     `({
-      rows: document.querySelectorAll('.moves__row').length,
-      firstRed: document.querySelector('.moves__red')?.textContent ?? '',
-      turn: document.querySelector('.status__meta')?.textContent ?? '',
       selected: document.querySelectorAll('.piece--selected').length,
-      lastMarkers: document.querySelectorAll('.board__layer--overlay .marker--last').length,
-      fen: document.querySelector('.fen')?.textContent ?? '',
+      lastMarkers: document.querySelectorAll('.fx img[src*="fx-last-move"]').length,
+      moves: document.querySelectorAll('.fx img[src*="fx-move"]').length,
     })`,
   )
-  check('记谱出现 1 行', afterMove.rows === 1, `实际 ${afterMove.rows}`)
-  check('记谱内容为「炮二平五」', afterMove.firstRed === '炮二平五', `实际「${afterMove.firstRed}」`)
   check('落子后清空选中', afterMove.selected === 0, `实际 ${afterMove.selected}`)
   check(
-    '上一着标记 2 个（且在棋子之上的 overlay 层）',
+    '上一着标记 2 个（起点 + 终点）',
     afterMove.lastMarkers === 2,
     `实际 ${afterMove.lastMarkers}`,
   )
+  check('落点标记已收起', afterMove.moves === 0, `实际 ${afterMove.moves}`)
+
+  // 界面说什么不算数，服务端说什么才算数
+  const state1 = await apiState()
+  check('服务端记谱为「炮二平五」', state1.history[0]?.notation === '炮二平五', `实际「${state1.history[0]?.notation}」`)
+  check('服务端走子方切到黑方', state1.side === 'black', `实际 ${state1.side}`)
   check(
-    '走子方已切换为黑方',
-    afterMove.turn.includes('轮到 黑方'),
-    `实际「${afterMove.turn.trim()}」`,
-  )
-  check(
-    'FEN 已更新',
-    afterMove.fen.includes('b - - 1 1'),
-    `实际「${afterMove.fen}」`,
+    '服务端 FEN 已更新',
+    state1.fen.includes('b - - 1 1'),
+    `实际「${state1.fen}」`,
   )
 
-  console.log('\n[3b] 走子后应自动出现战法讲解')
-  // 讲解需要跑一次搜索（评价定级要用 root_moves），所以是异步出现的
-  let coachReady = false
-  for (let i = 0; i < 100; i += 1) {
-    if (await evaluate(client, `!!document.querySelector('.note__headline')`)) {
-      coachReady = true
-      break
-    }
-    await sleep(200)
-  }
-  check('讲解卡片已出现', coachReady, '等待 20 秒后仍未出现')
+  console.log('\n[4b] 走子后应自动攒下这一手的战法讲解')
+  // 讲解需要跑一次搜索（评价定级要用 root_moves），所以是异步出现的。
+  // 对局页**不再显示**讲解卡（那里只放对局信息），所以这里查的是「有没有攒下来」——
+  // 答案是：稍后在分析页上必须能看到它。
+  await sleep(2500)
 
-  if (coachReady) {
-    const coach = await evaluate(
-      client,
-      `(() => {
-        const card = document.querySelector('.note');
-        const text = card ? card.textContent : '';
-        return {
-          badge: document.querySelector('.lv-badge')?.textContent?.trim() ?? '',
-          headline: document.querySelector('.note__headline')?.textContent ?? '',
-          tactics: [...document.querySelectorAll('.tactic-chip')].map((e) => e.textContent.trim()).join('|'),
-          hasPlaceholder: /[{}]/.test(text),
-          fallback: text.includes('兜底模板'),
-        };
-      })()`,
-    )
-    // 等级徽标必须同时有图标形状与文字 —— 不允许仅靠颜色传达等级
-    check(
-      '等级徽标含图标与文字',
-      /[★✓?✕‼]/.test(coach.badge) && coach.badge.length > 2,
-      `实际「${coach.badge}」`,
-    )
-    check('讲解正文非空', coach.headline.length > 4, `实际「${coach.headline}」`)
-    check('讲解里没有残留占位符', !coach.hasPlaceholder, coach.headline)
-    check('首步讲解未落到兜底模板', !coach.fallback, '开局着法不应走兜底')
-    check('首步识别出开局类战术', coach.tactics.includes('中炮'), `实际「${coach.tactics}」`)
-    console.log(`  （首步讲解：${coach.headline} · 战术：${coach.tactics}）`)
-  }
-
-  console.log('\n[4] 悔棋应回到初始局面')
-  const undoClicked = await evaluate(
-    client,
-    `(() => {
-      const btn = [...document.querySelectorAll('.btn')].find((b) => b.textContent.trim() === '悔棋');
-      if (!btn) return false;
-      btn.click();
-      return true;
-    })()`,
-  )
-  check('找到并点击了悔棋按钮', undoClicked === true)
-  await sleep(400)
+  console.log('\n[5] 悔棋应回到初始局面')
+  const undoClicked = await clickButton(client, '.play__bar', '悔棋')
+  check('找到并点击了悔棋按钮', undoClicked === 'ok', String(undoClicked))
+  await sleep(600)
 
   const afterUndo = await evaluate(
     client,
     `({
-      rows: document.querySelectorAll('.moves__row').length,
       pieces: document.querySelectorAll('.piece').length,
-      turn: document.querySelector('.status__meta')?.textContent ?? '',
+      lastMarkers: document.querySelectorAll('.fx img[src*="fx-last-move"]').length,
     })`,
   )
-  check('记谱清空', afterUndo.rows === 0, `实际 ${afterUndo.rows}`)
   check('棋子仍为 32 枚', afterUndo.pieces === 32, `实际 ${afterUndo.pieces}`)
-  check('走子方回到红方', afterUndo.turn.includes('轮到 红方'), `实际「${afterUndo.turn.trim()}」`)
+  check('上一着标记已清掉', afterUndo.lastMarkers === 0, `实际 ${afterUndo.lastMarkers}`)
+  const state2 = await apiState()
+  check('服务端记录已清空', state2.history.length === 0, `实际 ${state2.history.length} 手`)
+  check('服务端走子方回到红方', state2.side === 'red', `实际 ${state2.side}`)
 
-  console.log('\n[5] 记谱输入框应可走棋')
+  console.log('\n[6] 记谱浮层应可走棋')
+  const openedNotation = await clickButton(client, '.play__bar', '记谱')
+  check('打开记谱浮层', openedNotation === 'ok', String(openedNotation))
+  await sleep(200)
+
   await evaluate(
     client,
     `(() => {
       const input = document.querySelector('#notation-input');
+      if (!input) return false;
       input.focus();
       return true;
     })()`,
@@ -379,125 +481,321 @@ async function main() {
   await evaluate(
     client,
     `(() => {
-      document.querySelector('.notation-form').requestSubmit();
+      document.querySelector('.notation-form')?.requestSubmit();
       return true;
     })()`,
   )
-  await sleep(400)
-  const afterText = await evaluate(
+  await sleep(600)
+  const afterText = await evaluate(client, `document.querySelector('.sheet') === null`)
+  check('提交后浮层自动收起', afterText === true)
+  const state3 = await apiState()
+  check('记谱输入走出 1 步', state3.history.length === 1, `实际 ${state3.history.length}`)
+  check(
+    '同样得到「炮二平五」',
+    state3.history[0]?.notation === '炮二平五',
+    `实际「${state3.history[0]?.notation}」`,
+  )
+
+  console.log('\n[6b] 浮层不该把棋盘挤小')
+  const beforeSheet = Math.round(
+    (await evaluate(client, `document.querySelector('.board').getBoundingClientRect().height`)) ?? 0,
+  )
+  await clickButton(client, '.play__bar', '提示')
+  await sleep(300)
+  const duringSheet = await evaluate(
     client,
     `({
-      rows: document.querySelectorAll('.moves__row').length,
-      firstRed: document.querySelector('.moves__red')?.textContent ?? '',
+      boardH: Math.round(document.querySelector('.board').getBoundingClientRect().height),
+      hasSheet: !!document.querySelector('.sheet'),
+      docScroll: document.documentElement.scrollHeight,
+      winH: window.innerHeight,
     })`,
   )
-  check('记谱输入走出 1 步', afterText.rows === 1, `实际 ${afterText.rows}`)
-  check('同样得到「炮二平五」', afterText.firstRed === '炮二平五', `实际「${afterText.firstRed}」`)
+  check('提示浮层已弹出', duringSheet.hasSheet === true)
+  check(
+    '棋盘尺寸没有变化（浮层是浮的，不占布局）',
+    duringSheet.boardH === beforeSheet,
+    `${beforeSheet} → ${duringSheet.boardH}`,
+  )
+  check('浮层没有把页面撑出滚动条', duringSheet.docScroll <= duringSheet.winH)
 
-  console.log('\n[6] 切到人机对战（我执黑），引擎应自动走一步')
-  await resetGame()
-  // 重新加载页面，确保从干净的初始局面开始
-  await client.send('Page.navigate', { url: PAGE_URL })
-  await sleep(600)
-  for (let i = 0; i < 60; i += 1) {
-    if (await evaluate(client, `!!document.querySelector('.board')`)) break
-    await sleep(100)
+  let hints = 0
+  await clickButton(client, '.sheet', '求引擎推荐')
+  for (let i = 0; i < 80; i += 1) {
+    hints = await evaluate(client, `document.querySelectorAll('.sheet .hint-chip').length`)
+    if (hints >= 3) break
+    await sleep(200)
   }
+  check('给出 3 条推荐着法', hints === 3, `实际 ${hints} 条`)
+  if (hints > 0) {
+    const firstHint = await evaluate(
+      client,
+      `document.querySelector('.sheet .hint-chip')?.textContent ?? ''`,
+    )
+    console.log(`  （首条推荐：${firstHint.trim()}）`)
+  }
+  // 收尾前把浮层关掉，免得挡住后面的点击
+  await clickButton(client, '.sheet', '关闭')
+  await sleep(200)
 
-  const clickedMode = await evaluate(
+  console.log('\n[7] 认输应结束对局并自动跳到分析页')
+  // 先补一手黑棋，让这一局有 2 手 —— 只有 1 手的话复盘那一段全是退化情形：
+  // 「上一手」与「回到开局」会落到同一个位置，等于什么都没测。
+  await playMove(client, 7, 9, 6, 7) // 馬8进7
+  const stateBeforeResign = await apiState()
+  check('补的这一手走成了', stateBeforeResign.history.length === 2, `实际 ${stateBeforeResign.history.length} 手`)
+
+  const resignOpened = await clickButton(client, '.play__bar', '认输')
+  check('打开认输确认浮层', resignOpened === 'ok', String(resignOpened))
+  await sleep(250)
+  const confirmText = await evaluate(
+    client,
+    `document.querySelector('.sheet')?.textContent ?? ''`,
+  )
+  // 2 手之后轮到红方走，所以认输的应该是红方 —— 双人同机就是「当前该走的一方」
+  check(
+    '浮层说清是谁认输、且不可撤消',
+    confirmText.includes('红方') && confirmText.includes('不能撤消'),
+    `实际「${confirmText.slice(0, 60)}」`,
+  )
+  await clickButton(client, '.sheet', '确认认输')
+  await sleep(1500)
+
+  const analysis = await evaluate(
+    client,
+    `({
+      hash: location.hash,
+      verdict: document.querySelector('.verdict__headline')?.textContent ?? '',
+      verdictText: document.querySelector('.verdict__text')?.textContent ?? '',
+      stats: [...document.querySelectorAll('.stat')].map((s) => s.textContent.trim()),
+      rows: document.querySelectorAll('.movelist__row').length,
+      taught: document.querySelectorAll('.movelist__row .lv-badge').length,
+      buttons: [...document.querySelectorAll('.analysis__actions .btn')].map((b) => b.textContent.trim()),
+    })`,
+  )
+  check('自动跳到 #/analysis', analysis.hash === '#/analysis', `实际 ${analysis.hash}`)
+  // 红方认输 → 赢的是黑方。认输方与胜方是**相反**的，写反了这条就永远看不出来。
+  check('结果横幅显示「黑方胜」', analysis.verdict === '黑方胜', `实际「${analysis.verdict}」`)
+  check(
+    '结果说明指出是谁认输',
+    analysis.verdictText.includes('认输'),
+    `实际「${analysis.verdictText}」`,
+  )
+  check('统计里有总手数', analysis.stats.some((s) => s.includes('总手数')), `实际 ${analysis.stats.join(' / ')}`)
+  check('逐手列表与着法数一致', analysis.rows === 2, `实际 ${analysis.rows} 行`)
+  // [4b] 攒下的讲解必须在这里出现 —— 这是「走一步攒一条」的验收点
+  check(
+    '每一步都拿到了讲解',
+    analysis.taught === 2,
+    `实际 ${analysis.taught} / ${analysis.rows} 手带讲解`,
+  )
+  check(
+    '分析页有复盘与深度分析两个入口',
+    analysis.buttons.includes('复盘') && analysis.buttons.includes('深度分析'),
+    `实际 ${analysis.buttons.join(' / ')}`,
+  )
+
+  console.log('\n[8] 深度分析应逐手重算并显示进度')
+  await clickButton(client, '.analysis__actions', '深度分析')
+  await sleep(600)
+  const deepStart = await evaluate(
+    client,
+    `({
+      label: document.querySelector('.deep__label')?.textContent ?? '',
+      hasBar: !!document.querySelector('.deep__track'),
+    })`,
+  )
+  check('出现进度条', deepStart.hasBar === true)
+  check('进度条上有手数', /深度分析\s*\d+\s*\/\s*\d+/.test(deepStart.label), `实际「${deepStart.label}」`)
+
+  let deepDone = false
+  for (let i = 0; i < 150; i += 1) {
+    const running = await evaluate(
+      client,
+      `document.querySelector('.analysis__actions .btn')?.textContent.trim() === '中止分析'`,
+    )
+    if (!running) {
+      deepDone = true
+      break
+    }
+    await sleep(200)
+  }
+  check('深度分析在 30 秒内跑完', deepDone, '仍未结束')
+  const deepEnd = await evaluate(client, `document.querySelector('.deep__label')?.textContent ?? ''`)
+  const [, done, total] = deepEnd.match(/(\d+)\s*\/\s*(\d+)/) ?? []
+  check('覆盖了全部手数', done === total && Number(total) > 0, `实际「${deepEnd}」`)
+
+  console.log('\n[9] 复盘应跳回对局页并能前后翻手数')
+  const reviewClicked = await clickButton(client, '.analysis__actions', '复盘')
+  check('点击复盘', reviewClicked === 'ok', String(reviewClicked))
+  await sleep(1200)
+
+  const atEnd = await evaluate(
+    client,
+    `({
+      hash: location.hash,
+      count: document.querySelector('.review__count')?.textContent ?? '',
+      hasNote: !!document.querySelector('.review__note .note__headline'),
+      clocksDimmed: document.querySelectorAll('.clock--reviewing').length,
+      barButtons: [...document.querySelectorAll('.play__bar .btn')].map((b) => b.textContent.trim()),
+      barBottom: Math.round(document.querySelector('.play__bar').getBoundingClientRect().bottom),
+      docScroll: document.documentElement.scrollHeight,
+      winH: window.innerHeight,
+    })`,
+  )
+  check('回到 #/play', atEnd.hash === '#/play', `实际 ${atEnd.hash}`)
+  check('复盘条显示「第 2 / 2 手」', /第\s*2\s*\/\s*2\s*手/.test(atEnd.count), `实际「${atEnd.count}」`)
+  check('复盘条里有这一手的讲解', atEnd.hasNote)
+  check('两条钟都进入复盘态（不再显示读秒）', atEnd.clocksDimmed >= 1, `实际 ${atEnd.clocksDimmed}`)
+  check(
+    '复盘时按钮换成「返回分析」',
+    atEnd.barButtons.includes('返回分析') && !atEnd.barButtons.includes('认输'),
+    `实际 ${atEnd.barButtons.join(' / ')}`,
+  )
+  check('复盘条在视口之内', atEnd.barBottom <= atEnd.winH, `${atEnd.barBottom} / ${atEnd.winH}`)
+  check('复盘页也没有滚动条', atEnd.docScroll <= atEnd.winH)
+
+  // 上一手
+  await evaluate(
+    client,
+    `(() => {
+      const btn = document.querySelector('[aria-label="上一手"]');
+      if (!btn || btn.disabled) return false;
+      btn.click();
+      return true;
+    })()`,
+  )
+  await sleep(900)
+  const prev = await evaluate(
+    client,
+    `({
+      count: document.querySelector('.review__count')?.textContent ?? '',
+      rows: document.querySelectorAll('.piece').length,
+    })`,
+  )
+  check('翻到「第 1 / 2 手」', /第\s*1\s*\/\s*2\s*手/.test(prev.count), `实际「${prev.count}」`)
+  check('棋盘仍是 32 枚棋子（无吃子局面）', prev.rows === 32, `实际 ${prev.rows}`)
+
+  // 回开局：此时「上一手」应变成不可用
+  await evaluate(
+    client,
+    `(() => {
+      const btn = document.querySelector('[aria-label="回到开局"]');
+      if (!btn || btn.disabled) return false;
+      btn.click();
+      return true;
+    })()`,
+  )
+  await sleep(900)
+  const start = await evaluate(
+    client,
+    `({
+      count: document.querySelector('.review__count')?.textContent ?? '',
+      prevDisabled: document.querySelector('[aria-label="上一手"]')?.disabled ?? null,
+      note: document.querySelector('.review__note')?.textContent ?? '',
+    })`,
+  )
+  check('翻到「第 0 / 2 手」', /第\s*0\s*\/\s*2\s*手/.test(start.count), `实际「${start.count}」`)
+  check('开局处「上一手」已禁用', start.prevDisabled === true, `disabled=${start.prevDisabled}`)
+  check('开局处给出解释而不是空白', start.note.includes('开局'), `实际「${start.note.slice(0, 40)}」`)
+  const stateReview = await apiState()
+  check('服务端游标也跟着回到 0', stateReview.cursor === 0, `实际 ${stateReview.cursor}`)
+  check('服务端记录没有被复盘截断', stateReview.history.length === 2, `实际 ${stateReview.history.length}`)
+
+  console.log('\n[10] 人机对战（我执黑）：引擎应自动走一步')
+  await evaluate(client, `location.hash = '#/setup'`)
+  await sleep(600)
+  await evaluate(
     client,
     `(() => {
       const group = document.querySelector('[aria-label="对局模式"]');
-      if (!group) return 'no-group';
       const btn = [...group.querySelectorAll('button')].find((b) => b.textContent.trim() === '人机对战');
-      if (!btn) return 'no-button';
       btn.click();
-      return 'ok';
+      return true;
     })()`,
   )
-  check('找到并点击「人机对战」', clickedMode === 'ok', String(clickedMode))
+  await sleep(250)
+  const hasSideCard = await evaluate(
+    client,
+    `!!document.querySelector('[aria-label="我执哪一方"]')`,
+  )
+  check('切到人机对战后出现「我执哪一方」', hasSideCard === true)
 
-  const clickedSide = await evaluate(
+  await evaluate(
     client,
     `(() => {
       const group = document.querySelector('[aria-label="我执哪一方"]');
-      if (!group) return 'no-group';
       const btn = [...group.querySelectorAll('button')].find((b) => b.textContent.trim() === '黑方');
-      if (!btn) return 'no-button';
       btn.click();
-      return 'ok';
+      return true;
     })()`,
   )
-  check('找到并点击「我执黑方」', clickedSide === 'ok', String(clickedSide))
+  await sleep(200)
+  const started2 = await startGame(client)
+  check('开局进入对局页', started2 === 'ok', String(started2))
 
   // 等引擎落子（默认中级档，思考约 1.2 秒；给足余量）
   let engineMoved = false
   for (let i = 0; i < 100; i += 1) {
-    const rows = await evaluate(client, `document.querySelectorAll('.moves__row').length`)
-    if (rows >= 1) {
+    const n = await apiState()
+    if (n.history.length >= 1) {
       engineMoved = true
       break
     }
     await sleep(200)
   }
-  check('引擎自动走了一步', engineMoved, '等待 20 秒后记谱仍为空')
+  check('引擎自动走了一步', engineMoved, '等待 20 秒后服务端记录仍为空')
 
-  if (engineMoved) {
-    const engineView = await evaluate(
-      client,
-      `({
-        firstRed: document.querySelector('.moves__red')?.textContent ?? '',
-        info: document.querySelector('.engine-line')?.textContent ?? '',
-        thinking: !!document.querySelector('.app__thinking'),
-        interactive: !document.querySelector('.board--locked'),
-      })`,
-    )
-    check('记谱里有红方第一着', engineView.firstRed.length > 0, `实际「${engineView.firstRed}」`)
-    check(
-      '显示了引擎搜索信息',
-      /深度\s*\d+/.test(engineView.info),
-      `实际「${engineView.info.trim()}」`,
-    )
-    check('引擎落子后思考指示已消失', !engineView.thinking)
-    check('轮到玩家走时棋盘恢复可点', engineView.interactive)
-  }
-
-  console.log('\n[7] 求引擎推荐应给出 3 条候选')
-  const hintClicked = await evaluate(
+  const engineView = await evaluate(
     client,
-    `(() => {
-      const btn = [...document.querySelectorAll('.btn')].find((b) => b.textContent.trim() === '求引擎推荐');
-      if (!btn) return 'not-found';
-      if (btn.disabled) return 'disabled';
-      btn.click();
-      return 'ok';
-    })()`,
+    `({
+      thinking: !!document.querySelector('.app__thinking'),
+      interactive: !document.querySelector('.board--locked'),
+      lastMarkers: document.querySelectorAll('.fx img[src*="fx-last-move"]').length,
+    })`,
   )
-  check('找到并点击「求引擎推荐」', hintClicked === 'ok', String(hintClicked))
+  check('引擎落子后思考指示已消失', !engineView.thinking)
+  check('棋盘上标出了引擎走的那一步', engineView.lastMarkers === 2, `实际 ${engineView.lastMarkers}`)
+  check('轮到玩家走时棋盘恢复可点', engineView.interactive)
 
-  let hints = 0
-  for (let i = 0; i < 80; i += 1) {
-    hints = await evaluate(client, `document.querySelectorAll('.hint-chip').length`)
-    if (hints >= 3) break
-    await sleep(200)
-  }
-  check('给出 3 条推荐着法', hints === 3, `实际 ${hints} 条`)
-
-  // 记录一条推荐着法的文案，便于人工核对
-  if (hints > 0) {
-    const firstHint = await evaluate(
-      client,
-      `document.querySelector('.hint-chip')?.textContent ?? ''`,
-    )
-    console.log(`  （首条推荐：${firstHint.trim()}）`)
-  }
-
-  // 收尾截图：此时处于人机对战 + 已显示推荐着法的状态，最能看出面板布局有没有问题
+  // 收尾截图：此时处于人机对战 + 一屏对局页的状态（下一段会把局面走掉）
   if (SHOT_PATH_END) {
     const shot = await client.send('Page.captureScreenshot', { format: 'png' })
     const { writeFileSync } = await import('node:fs')
     writeFileSync(SHOT_PATH_END, Buffer.from(shot.result.data, 'base64'))
     console.log(`\n（收尾截图已保存：${SHOT_PATH_END}）`)
+  }
+
+  console.log('\n[11] 步时归零应**当场**判超时，并自动跳到分析页')
+  // 这一条盯的是一个真实报过的缺陷：钟走到 0 之后**什么都不会发生**，
+  // 得再点一下棋盘才被判负 —— 而那一刻玩家很可能已经走开了。
+  // 它是唯一会让这个脚本慢 20 多秒的一段，但值得：这是全项目唯一
+  // 端到端覆盖「超时自动生效」的地方。
+  await evaluate(client, `location.hash = '#/setup'`)
+  await waitFor(client, '.setup__start')
+  await clickButton(client, '[aria-label="对局模式"]', '双人同机')
+  await clickButton(client, '[aria-label="限时档位"]', '快棋')
+  await sleep(250)
+  check('换回双人同机并开了快棋', (await startGame(client)) === 'ok')
+
+  const startedAt = Date.now()
+  // 一步都不走，看它会不会自己判
+  let autoEnded = null
+  for (let i = 0; i < 160; i += 1) {
+    if ((await evaluate(client, `location.hash`)) === '#/analysis') {
+      autoEnded = Date.now() - startedAt
+      break
+    }
+    await sleep(200)
+  }
+  check('32 秒内自动判定并跳到分析页', autoEnded !== null, '步时归零后仍未跳转')
+  if (autoEnded !== null) {
+    console.log(`  （从开局到自动判负：${(autoEnded / 1000).toFixed(1)} 秒 · 步时 20 秒）`)
+    const text = await evaluate(
+      client,
+      `document.querySelector('.verdict__text')?.textContent ?? ''`,
+    )
+    check('终局原因是超时判负', text.includes('超时'), `实际「${text}」`)
   }
 
   // 关掉自己建的标签页，不碰别的

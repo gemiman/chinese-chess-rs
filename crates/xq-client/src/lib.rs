@@ -26,6 +26,10 @@
 //! | `engine_move` | `POST /api/engine` | 让引擎走 |
 //! | `hint` | `POST /api/hint` | 走棋提示 |
 //! | `coach` | `POST /api/coach` | 战法讲解 |
+//! | `seek` | `POST /api/seek` | 复盘：跳到第 N 手 |
+//! | `resign` | `POST /api/resign` | 认输 |
+//! | `settle` | `POST /api/settle` | 当场结算超时 |
+//! | `analyze` | `POST /api/analyze` | 赛后深度分析：重算第 N 手 |
 //!
 //! 返回的都是 `xq-session` 里同一套 DTO，因此前端的 `bridge.ts` 只要换一个实现。
 //!
@@ -73,6 +77,10 @@ pub fn run() {
             engine_move,
             hint,
             coach,
+            seek,
+            resign,
+            settle,
+            analyze,
         ])
         .run(tauri::generate_context!())
         .expect("启动 Tauri 应用失败");
@@ -204,4 +212,54 @@ async fn coach(
 /// 难度标识 → 枚举。与 HTTP 接口接受同一套标识，前端不用区分宿主。
 fn parse_level(level: &str) -> Result<Difficulty, String> {
     Difficulty::from_id(level).ok_or_else(|| format!("未知难度档位：{level}"))
+}
+
+/// 复盘：把盘面挪到第 `ply` 手之后（`0` = 开局）。
+#[tauri::command]
+fn seek(state: State<'_, Arc<AppState>>, ply: usize) -> Result<StateResponse, String> {
+    let dto = state.seek(ply)?;
+    Ok(StateResponse {
+        ok: true,
+        state: dto,
+    })
+}
+
+/// 认输。`loser` 是 `"red"` 或 `"black"`。
+#[tauri::command]
+fn resign(state: State<'_, Arc<AppState>>, loser: String) -> Result<StateResponse, String> {
+    let dto = state.resign(&loser)?;
+    Ok(StateResponse {
+        ok: true,
+        state: dto,
+    })
+}
+
+/// 当场结算超时。前端的倒计时归零时调它。
+///
+/// 不用 `async`：这里只是读一次时钟、比一下大小，微秒级。慢的是引擎搜索，不是它。
+#[tauri::command]
+fn settle(state: State<'_, Arc<AppState>>) -> StateResponse {
+    StateResponse {
+        ok: true,
+        state: state.settle_timeout(),
+    }
+}
+
+/// 赛后深度分析：重算第 `ply` 手的讲解。
+///
+/// `async` 是必须的 —— 每次调用含一次最长 10 秒的搜索，同步实现会把窗口冻住。
+#[tauri::command]
+async fn analyze(
+    state: State<'_, Arc<AppState>>,
+    ply: usize,
+    level: String,
+    think_ms: u64,
+) -> Result<CoachResponse, String> {
+    let level = parse_level(&level)?;
+    let (note, info) = state.analyze_ply(ply, level, think_ms)?;
+    Ok(CoachResponse {
+        ok: true,
+        note,
+        info,
+    })
 }

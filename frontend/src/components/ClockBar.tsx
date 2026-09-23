@@ -66,22 +66,72 @@ interface ClockBarProps {
   side: Color
   flipped: boolean
   over: boolean
+  /**
+   * 盘面是不是停在过去（复盘模式）。
+   *
+   * 复盘时那条「局时」是**终局的残余时间**，拿它配第 10 手的局面是错的，
+   * 所以改成一个「复盘」标记 —— 说不知道，好过说错的。
+   */
+  reviewing: boolean
   /** 放在棋盘上方还是下方 —— 决定这一条显示哪一方。 */
   position: 'top' | 'bottom'
+  /**
+   * 本方步时归零时通知外面（用来**当场**结算超时）。
+   *
+   * 只有**轮到走子**的那一条钟会调它，而且每条钟对同一份快照只调一次。
+   */
+  onStepExpired?: () => void
 }
 
-export function ClockBar({ clock, side, flipped, over, position }: ClockBarProps) {
+export function ClockBar({
+  clock,
+  side,
+  flipped,
+  over,
+  reviewing,
+  position,
+  onStepExpired,
+}: ClockBarProps) {
   const elapsed = useElapsed(clock)
 
   // 上方永远是「棋盘对面那一方」，与翻转保持一致
   const shown: Color = position === 'top' ? (flipped ? 'red' : 'black') : flipped ? 'black' : 'red'
   const label = shown === 'red' ? '红方' : '黑方'
 
+  // ⚠️ `active` 与 `stepLeftMs` 必须在下面那个「不限时」提前 return **之前**算出来 ——
+  // Hook 不能写在条件分支后面。不限时时步时用无穷大表示「永远不会归零」。
+  const active = clock !== null && !over && !reviewing && side === shown
+  const stepLeftMs =
+    clock === null
+      ? Number.POSITIVE_INFINITY
+      : over
+        ? clock.step_left_ms
+        : clock.step_left_ms - elapsed
+
+  // 步时归零 → 通知外面当场结算超时。
+  //
+  // 以前超时**只有在有人试着走棋时**才会被发现：玩家盯着一个已经走到 0 的钟，
+  // 什么都不会发生，非得再点一下棋盘才被判负 —— 而那一刻他很可能已经走开了。
+  // 这里用 `reported` 记住「这一份快照已经报过了」：不然每 100 毫秒的走秒
+  // 都会报一次，一秒能发出十个结算请求。
+  const reported = useRef<ClockDto | null>(null)
+  useEffect(() => {
+    if (!active || clock === null || onStepExpired === undefined) return
+    if (stepLeftMs > 0) return
+    if (reported.current === clock) return
+    reported.current = clock
+    onStepExpired()
+  }, [active, stepLeftMs, clock, onStepExpired])
+
   if (!clock) {
-    // 不限时也用同一套三列结构，只是圆盘里没有倒计时
+    // 不限时也用同一套三列结构，只是圆盘里没有倒计时。
+    // 复盘样式（虚线、淡出）同样要带上 —— 不限时的钟没有「读数会误导」的问题，
+    // 但两条钟在复盘时长得不一样会更让人困惑。
     return (
-      <div className={`clock clock--${position} clock--off`}>
-        <span className="clock__side clock__side--left" />
+      <div className={`clock clock--${position} clock--off${reviewing ? ' clock--reviewing' : ''}`}>
+        <span className="clock__side clock__side--left">
+          {reviewing ? <span className="clock__config">复盘</span> : null}
+        </span>
         <span className="clock__avatar">
           <span className="clock__dial">
             <span className="clock__disc">
@@ -93,7 +143,7 @@ export function ClockBar({ clock, side, flipped, over, position }: ClockBarProps
               />
             </span>
           </span>
-          <span className="clock__base">不限时</span>
+          <span className="clock__base">{reviewing ? '—' : '不限时'}</span>
         </span>
         <span className="clock__side clock__side--right">
           <span className="clock__label">{label}</span>
@@ -102,27 +152,31 @@ export function ClockBar({ clock, side, flipped, over, position }: ClockBarProps
     )
   }
 
-  const active = !over && side === shown
   const byoyomi = shown === 'red' ? clock.red_byoyomi : clock.black_byoyomi
 
-  // 局时只在归属方的钟上走
+  // 局时只在归属方的钟上走（`active` 与 `stepLeftMs` 在上面算好了）
   const raw = shown === 'red' ? clock.red_ms : clock.black_ms
   const baseMs = active ? Math.max(0, raw - elapsed) : raw
-  const stepLeftMs = over ? clock.step_left_ms : clock.step_left_ms - elapsed
   const left = clock.step_limit_ms > 0 ? Math.max(0, Math.min(1, stepLeftMs / clock.step_limit_ms)) : 0
 
   return (
     <div
       className={`clock clock--${position}${active ? ' clock--active' : ''}${
         active ? tone(stepLeftMs) : ''
-      }`}
+      }${reviewing ? ' clock--reviewing' : ''}`}
     >
       {/* 三列网格：左右各 1fr、中间 auto —— 圆盘才真正落在正中，
           不会被右边的文字顶偏。文字分列两侧，中间留白给头像。 */}
       <span className="clock__side clock__side--left">
         <span className="clock__config">
-          局时 {fmtBase(clock.base_secs * 1000)} · 步时 {clock.step_secs}s
-          {clock.byoyomi_secs > 0 ? ` · 读秒 ${clock.byoyomi_secs}s` : ''}
+          {reviewing ? (
+            '复盘'
+          ) : (
+            <>
+              局时 {fmtBase(clock.base_secs * 1000)} · 步时 {clock.step_secs}s
+              {clock.byoyomi_secs > 0 ? ` · 读秒 ${clock.byoyomi_secs}s` : ''}
+            </>
+          )}
         </span>
       </span>
 
@@ -147,7 +201,10 @@ export function ClockBar({ clock, side, flipped, over, position }: ClockBarProps
             style={{ '--p': `${(left * 360).toFixed(1)}deg` } as CSSProperties}
           />
         </span>
-        <span className="clock__base">{byoyomi ? '读秒' : fmtBase(baseMs)}</span>
+        {/* 复盘时那一格不显示局时：它是终局的残余时间，配不上当时的盘面 */}
+        <span className="clock__base">
+          {reviewing ? '—' : byoyomi ? '读秒' : fmtBase(baseMs)}
+        </span>
       </span>
 
       <span className="clock__side clock__side--right">

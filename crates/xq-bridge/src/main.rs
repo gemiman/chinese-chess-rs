@@ -265,6 +265,78 @@ fn route_api(req: &Request, state: &AppState) -> Response {
             }
         }
 
+        // 复盘：把盘面挪到第 N 手之后。前端复盘页前后翻页用这个。
+        ("POST", "/api/seek") => {
+            let body = parse_body(&req.body).unwrap_or(serde_json::Value::Null);
+            let Some(ply) = body.get("ply").and_then(|v| v.as_u64()) else {
+                return json_error(400, "需要提供 ply（第几手，0 = 开局）");
+            };
+            match state.seek(ply as usize) {
+                Ok(state_dto) => json_of(&StateResponse {
+                    ok: true,
+                    state: state_dto,
+                }),
+                Err(e) => json_error(400, &e),
+            }
+        }
+
+        // 认输。`loser` 用 DTO 里那套颜色字，前端不必再定义一套。
+        ("POST", "/api/resign") => {
+            let body = parse_body(&req.body).unwrap_or(serde_json::Value::Null);
+            let Some(loser) = body.get("loser").and_then(|v| v.as_str()) else {
+                return json_error(400, "需要提供 loser（red 或 black）");
+            };
+            match state.resign(loser) {
+                Ok(state_dto) => json_of(&StateResponse {
+                    ok: true,
+                    state: state_dto,
+                }),
+                Err(e) => json_error(400, &e),
+            }
+        }
+
+        // 当场结算超时。前端的倒计时归零时调它。
+        //
+        // 不加这个接口的话，超时只有在**有人试着走棋**时才会被发现 ——
+        // 玩家盯着一个已经走到 0 的钟，什么都不会发生。所以它必须能被单独调用，
+        // 不能只挂在 /api/move 上。
+        ("POST", "/api/settle") => {
+            let dto = state.settle_timeout();
+            json_of(&StateResponse {
+                ok: true,
+                state: dto,
+            })
+        }
+
+        // 赛后「深度分析」：重算第 N 手的讲解。前端按手逐个调用，所以要能一次只算一手。
+        //
+        // ⚠️ 每次调用都含一次搜索（最长 10 秒）。桥接是**一连接一线程**，所以它
+        // 不会卡住别的请求；桌面端那边对应的是 `async fn` 命令。两边都别改成同步实现。
+        ("POST", "/api/analyze") => {
+            let body = parse_body(&req.body).unwrap_or(serde_json::Value::Null);
+            let Some(ply) = body.get("ply").and_then(|v| v.as_u64()) else {
+                return json_error(400, "需要提供 ply（第几手）");
+            };
+            let level = body
+                .get("level")
+                .and_then(|v| v.as_str())
+                .and_then(Difficulty::from_id)
+                .unwrap_or(Difficulty::L4);
+            let think_ms = body
+                .get("think_ms")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(1_200)
+                .clamp(50, 10_000);
+            match state.analyze_ply(ply as usize, level, think_ms) {
+                Ok((note, info)) => json_of(&CoachResponse {
+                    ok: true,
+                    note,
+                    info,
+                }),
+                Err(e) => json_error(400, &e),
+            }
+        }
+
         // 其余 /api/* 一律给 JSON 错误 —— 绝不回退到静态资源
         (method, path) => json_error(
             404,
@@ -407,6 +479,16 @@ fn print_banner(addr: &str, static_root: Option<&Path>, only_api: bool) {
     );
     println!(
         "    POST /api/coach   {{\"level\":\"l4\",\"think_ms\":1200}}  生成最后一步的战法讲解"
+    );
+    println!(
+        "    POST /api/seek    {{\"ply\":12}}                     复盘：把盘面挪到第 12 手之后（0 = 开局）"
+    );
+    println!("    POST /api/resign  {{\"loser\":\"black\"}}              认输（red / black）");
+    println!(
+        "    POST /api/settle                                当场结算超时（前端的钟归零时调）"
+    );
+    println!(
+        "    POST /api/analyze {{\"ply\":12,\"level\":\"l4\"}}        赛后深度分析：重算第 12 手的讲解"
     );
     println!("  难度档位 l1 入门 / l2 初级 / l3 中级 / l4 高级 / l5 大师");
     println!();

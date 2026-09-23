@@ -20,6 +20,11 @@ __pycache__/
 .claude/settings.local.json
 .claude/launch.json
 
+# ---- 冒烟测试的截图产物 ----
+# desktop_probe.mjs 默认把收尾截图写在仓库根目录
+desktop-probe.png
+ui-probe*.png
+
 # ---- 编辑器 / 操作系统 ----
 .DS_Store
 Thumbs.db

@@ -1,36 +1,42 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
-import { Board } from './components/Board'
-import { ClockBar } from './components/ClockBar'
-import { SidePanel } from './components/SidePanel'
-import { TacticReveal } from './components/TacticReveal'
+import { AnalysisPage } from './pages/AnalysisPage'
+import { PlayPage } from './pages/PlayPage'
+import { SetupPage } from './pages/SetupPage'
 import { runningInTauri } from './bridge'
-import { legalTargetsFrom, useGameStore } from './store'
+import { navigate, useRoute, type Route } from './router'
+import { useGameStore } from './store'
 
+/**
+ * 应用外壳：决定显示哪一页，以及两个「自动跳转」。
+ *
+ * # 为什么自动跳转写在这里，不写进 store
+ *
+ * 跳转是**导航**，不是对局状态。store 里塞一个 `navigate()` 会让它依赖路由，
+ * 而路由只在这一个文件里有意义（测试、将来换宿主都不用管它）。
+ *
+ * # 两个自动跳转都有坑，各写在各自的注释里
+ *
+ * 1. 终局 → 分析页。只能认「刚刚变成终局」这一次，否则从分析页点「复盘」
+ *    回到对局页会被立刻弹回去，复盘根本进不去。
+ * 2. 刷新后落在对局页 → 设置页。刷新会把 store 丢掉，`started` 变回 false，
+ *    这时 `#/play` 后面没有对局可看。
+ */
 export default function App() {
+  const route = useRoute()
   const state = useGameStore((s) => s.state)
-  const selected = useGameStore((s) => s.selected)
+  const started = useGameStore((s) => s.started)
   const error = useGameStore((s) => s.error)
   const busy = useGameStore((s) => s.busy)
-  const flipped = useGameStore((s) => s.flipped)
-  const load = useGameStore((s) => s.load)
-  const clickSquare = useGameStore((s) => s.clickSquare)
-  const playText = useGameStore((s) => s.playText)
-  const playMove = useGameStore((s) => s.playMove)
-  const undo = useGameStore((s) => s.undo)
-  const reset = useGameStore((s) => s.reset)
-  const toggleFlip = useGameStore((s) => s.toggleFlip)
-  const moveSpeed = useGameStore((s) => s.moveSpeed)
-  const setMoveSpeed = useGameStore((s) => s.setMoveSpeed)
-  const timePreset = useGameStore((s) => s.timePreset)
-  const setTimePreset = useGameStore((s) => s.setTimePreset)
-  const coachNote = useGameStore((s) => s.coachNote)
-  const dismissError = useGameStore((s) => s.dismissError)
-
+  const thinking = useGameStore((s) => s.thinking)
   const mode = useGameStore((s) => s.mode)
   const playerColor = useGameStore((s) => s.playerColor)
-  const thinking = useGameStore((s) => s.thinking)
+  const load = useGameStore((s) => s.load)
   const enginePlay = useGameStore((s) => s.enginePlay)
+  const dismissError = useGameStore((s) => s.dismissError)
+
+  /** 实际显示的那一页。还没开局时无论网址是什么，看到的都是设置页。 */
+  const page: Route = started ? route : 'setup'
 
   useEffect(() => {
     void load()
@@ -42,25 +48,45 @@ export default function App() {
   // 标志不够，因为 set() 到组件重渲染之间有一次微任务，StrictMode 会把副作用
   // 跑两遍，导致引擎连走两步。
   useEffect(() => {
+    // ⚠️ 必须在**对局页**上才让引擎走。
+    // 设置页上「选了人机对战 + 执黑」时，上面那三个条件也全都成立 —— 于是引擎会
+    // 在一局**还没开始**的棋里抢先走一步，接着「开始游戏」把局面重置掉，白白多算
+    // 一次、还可能中途报错。这个 bug 是桌面端冒烟测试抓出来的：它表现为
+    // 「开局之后引擎一动不动」，因为真正的引擎调用早就浪费在设置页上了。
+    if (page !== 'play') return
     if (mode !== 'engine' || state === null || state.status.over || thinking) return
+    // 复盘时盘面停在过去，此刻的「走子方」是历史，不是轮到谁走
+    if (state.cursor !== state.history.length) return
     if (state.side === playerColor) return
     void enginePlay()
-  }, [mode, state, playerColor, thinking, enginePlay])
+  }, [page, mode, state, playerColor, thinking, enginePlay])
+
+  // 终局 → 分析页。注意只能认「刚才还不是终局」这一个瞬间。
+  const over = state?.status.over ?? false
+  const wasOver = useRef(false)
+  useEffect(() => {
+    if (over && !wasOver.current) navigate('analysis')
+    wasOver.current = over
+  }, [over])
+
+  // 没有对局却停在需要局面的页面上（刷新、或手改网址、或桌面端恢复了上次的深链）
+  // → 送回设置页。
+  //
+  // ⚠️ 用 `replace`：这条跳转是**兜底**，不是用户走的。用 push 的话，
+  // 回退到 #/play 会被再推一条 #/setup，再回退再推 —— 后退键彻底失灵。
+  useEffect(() => {
+    if (!started && (route === 'play' || route === 'analysis')) navigate('setup', true)
+  }, [started, route])
 
   if (state === null) {
     return <BootScreen error={error} busy={busy} onRetry={() => void load()} />
   }
 
-  const legalTargets = legalTargetsFrom(state, selected)
-  const playerTurn = mode === 'hotseat' || state.side === playerColor
-
   return (
-    <div className="app">
+    <div className={`app app--${page}`}>
       <header className="app__header">
         <h1 className="app__title">弈道</h1>
-        <span className="app__subtitle">
-          中国象棋 · Rust 规则内核 + Rust 搜索引擎
-        </span>
+        <span className="app__subtitle">中国象棋 · Rust 规则内核 + Rust 搜索引擎</span>
         <span className="app__spacer" />
         {thinking ? (
           <span className="app__thinking">
@@ -72,70 +98,24 @@ export default function App() {
         ) : null}
       </header>
 
-      <main className="app__main">
-        <section>
-          <ClockBar
-            clock={state.clock}
-            side={state.side}
-            flipped={flipped}
-            over={state.status.over}
-            position="top"
-          />
-          <div className="board-holder">
-            <Board
-              state={state}
-              selected={selected}
-              legalTargets={legalTargets}
-              flipped={flipped}
-              onSquare={clickSquare}
-              interactive={playerTurn && !thinking}
-              moveSpeed={moveSpeed}
-            />
-            <TacticReveal note={coachNote} />
-          </div>
-          <ClockBar
-            clock={state.clock}
-            side={state.side}
-            flipped={flipped}
-            over={state.status.over}
-            position="bottom"
-          />
-          {error !== null ? (
-            <div className="notice notice--error" style={{ marginTop: 16 }} role="alert">
-              <strong>操作失败：</strong>
-              {error}
-              <button
-                type="button"
-                className="btn"
-                style={{ marginLeft: 12 }}
-                onClick={dismissError}
-              >
-                知道了
-              </button>
-            </div>
-          ) : null}
-        </section>
-
-        <aside>
-          <SidePanel
-            state={state}
-            selected={selected}
-            legalTargets={legalTargets}
-            busy={busy}
-            flipped={flipped}
-            onPlay={(text) => void playText(text)}
-            onPickSquare={clickSquare}
-            onMove={(from, to) => void playMove(from, to)}
-            onUndo={() => void undo()}
-            onReset={() => void reset()}
-            onFlip={toggleFlip}
-            moveSpeed={moveSpeed}
-            onSpeed={setMoveSpeed}
-            timePreset={timePreset}
-            onTimePreset={setTimePreset}
-          />
-        </aside>
+      <main className={`app__main app__main--${page}`}>
+        {page === 'play' ? (
+          <PlayPage state={state} />
+        ) : page === 'analysis' ? (
+          <AnalysisPage state={state} />
+        ) : (
+          <SetupPage />
+        )}
       </main>
+
+      {error !== null ? (
+        <div className="toast" role="alert">
+          <span className="toast__text">{error}</span>
+          <button type="button" className="btn" onClick={dismissError}>
+            知道了
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }
