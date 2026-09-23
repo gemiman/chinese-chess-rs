@@ -16,8 +16,9 @@ __pycache__/
 # ---- 本地工具与临时产物 ----
 # .workbuddy/ 是本地协作工具目录（含截图与笔记），不入库
 .workbuddy/
-# Claude Code 的本机设置（权限允许列表等），仅本地有效
+# Claude Code 的本机设置与本地预览配置，仅本机有效
 .claude/settings.local.json
+.claude/launch.json
 
 # ---- 编辑器 / 操作系统 ----
 .DS_Store
