@@ -1,13 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
   <defs>
-    <filter id="piece-shadow" x="-25%" y="-25%" width="150%" height="150%">
-      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#000000" flood-opacity="0.18"/>
+    <radialGradient id="piece-dome-black_elephant" cx="34%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#F6E2B4"/>
+      <stop offset="78%" stop-color="#DCB673"/>
+      <stop offset="100%" stop-color="#BC9250"/>
+    </radialGradient>
+    <filter id="piece-shadow-black_elephant" x="-30%" y="-30%" width="160%" height="175%">
+      <feDropShadow dx="0" dy="3.6" stdDeviation="3.2" flood-color="#000000" flood-opacity="0.42"/>
     </filter>
   </defs>
-  <circle cx="32" cy="32" r="29" fill="#F5F6F8" filter="url(#piece-shadow)"/>
-  <circle cx="32" cy="32" r="29" fill="none" stroke="#1F2430" stroke-width="2.4"/>
-  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#1F2430" stroke-width="1.1"/>
-  <circle cx="32" cy="32" r="21" fill="#EDEFF2"/>
-  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430">象</text>
+  <circle cx="32" cy="35.6" r="29" fill="#9F7638" filter="url(#piece-shadow-black_elephant)"/>
+  <circle cx="32" cy="32" r="29" fill="url(#piece-dome-black_elephant)" stroke="#8E6829" stroke-width="2.4"/>
+  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#C39C58" stroke-width="1.1"/>
+  <circle cx="32" cy="32" r="21" fill="#EDD5A0"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430" stroke="#F6E2B4" stroke-width="1.15" paint-order="stroke">象</text>
 </svg>

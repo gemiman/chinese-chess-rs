@@ -35,19 +35,26 @@ TOKEN_DIR = os.path.join(ASSETS_DIR, "tokens")
 # 调色板（唯一定义源，棋盘 / 棋子 / 令牌 / 文档全部由此派生）
 # --------------------------------------------------------------------------
 
-WOOD = "#F3D9A4"          # 棋盘木质底色
-WOOD_SHEEN_HI = "#FFF0CC"  # 棋盘极淡高光
-WOOD_SHEEN_LO = "#E9C88E"  # 棋盘极淡暗角
-LINE = "#8B5A2B"          # 棋盘线色
-LINE_STRONG = "#6B4423"    # 棋盘深线色（外/内边框）
+# ---- 棋盘：打磨过的浅石绿石板 ----
+BOARD_SIDE = "#6B7661"       # 板侧厚度 / 盘面暗部
+BOARD_FACE_HI = "#DCE2D0"    # 盘面高光（左上受光）
+BOARD_FACE_LO = "#AFB79F"    # 盘面暗角（右下背光）
+BOARD_FRAME_HI = "#AEB8A0"   # 凸起厚石框的受光面
+BOARD_FRAME_LO = "#7C886E"   # 厚石框的背光面
+LINE = "#4E5642"             # 盘面刻线
+LINE_STRONG = "#6F7A61"      # 内外边框线
 
-RED_STROKE = "#B3282D"
-RED_FILL = "#FFF8F0"
-RED_INNER = "#FCEDEA"
+# ---- 棋子：暖金木牌。红黑材质相同，只靠字色区分 ----
+PIECE_SIDE = "#9F7638"       # 侧壁（厚度）
+PIECE_TOP_HI = "#F6E2B4"     # 顶面高光（左上）
+PIECE_TOP_LO = "#DCB673"     # 顶面中调
+PIECE_TOP_EDGE = "#BC9250"   # 顶面边缘倒角
+PIECE_RING = "#8E6829"       # 外圈线
+PIECE_GROOVE = "#C39C58"     # 内凹槽线
+PIECE_WELL = "#EDD5A0"       # 内凹底
 
-BLACK_STROKE = "#1F2430"
-BLACK_FILL = "#F5F6F8"
-BLACK_INNER = "#EDEFF2"
+RED_STROKE = "#B3282D"       # 红方字色
+BLACK_STROKE = "#1F2430"     # 黑方字色
 
 STATE = {
     "selected": "#F5A623",
@@ -254,13 +261,54 @@ BORDER_OUTER = (28, 28, 504, 564)
 # --------------------------------------------------------------------------
 
 
+# 石板质感参数。
+# 频率取低值 → 大块缓慢的斑驳（打磨过的石头），频率高会变成细密砂粒，1:1 看很脏。
+BOARD_STONE_FREQ = 0.018
+BOARD_STONE_RELIEF = 1.5
+BOARD_SPEC_CONST = 0.26
+BOARD_SPEC_EXP = 34
+
+
 def _defs_block() -> list[str]:
+    """棋盘的渐变与滤镜。
+
+    石板质感：feDiffuseLighting 从 turbulence 噪声推出法线做浮雕，
+    再叠一层 feSpecularLighting 得到打磨后的高光。
+    刻线：双 feDropShadow 做出「上暗下亮」的凹槽感。
+    """
     return [
         "  <defs>",
-        '    <radialGradient id="board-sheen" cx="35%" cy="28%" r="85%">',
-        f'      <stop offset="0%" stop-color="{WOOD_SHEEN_HI}" stop-opacity="0.55"/>',
-        f'      <stop offset="100%" stop-color="{WOOD_SHEEN_LO}" stop-opacity="0"/>',
+        '    <radialGradient id="board-face" cx="34%" cy="26%" r="92%">',
+        f'      <stop offset="0%" stop-color="{BOARD_FACE_HI}"/>',
+        f'      <stop offset="100%" stop-color="{BOARD_FACE_LO}"/>',
         "    </radialGradient>",
+        '    <linearGradient id="board-frame" x1="0" y1="0" x2="1" y2="1">',
+        f'      <stop offset="0%" stop-color="{BOARD_FRAME_HI}"/>',
+        f'      <stop offset="100%" stop-color="{BOARD_FRAME_LO}"/>',
+        "    </linearGradient>",
+        '    <filter id="board-stone" x="0" y="0" width="100%" height="100%">',
+        f'      <feTurbulence type="fractalNoise" baseFrequency="{BOARD_STONE_FREQ}" '
+        'numOctaves="4" seed="11" stitchTiles="stitch" result="n"/>',
+        f'      <feDiffuseLighting in="n" lighting-color="#FFFFFF" '
+        f'surfaceScale="{BOARD_STONE_RELIEF}" diffuseConstant="1.15" result="lit">',
+        '        <feDistantLight azimuth="235" elevation="52"/>',
+        "      </feDiffuseLighting>",
+        '      <feComposite in="lit" in2="SourceGraphic" operator="arithmetic" '
+        'k1="1.08" k2="0.01" k3="0.01" k4="0" result="base"/>',
+        f'      <feSpecularLighting in="n" surfaceScale="{BOARD_STONE_RELIEF}" '
+        f'specularConstant="{BOARD_SPEC_CONST}" specularExponent="{BOARD_SPEC_EXP}" '
+        'lighting-color="#FFFFFF" result="spec">',
+        '        <feDistantLight azimuth="235" elevation="52"/>',
+        "      </feSpecularLighting>",
+        '      <feComposite in="spec" in2="base" operator="arithmetic" '
+        'k1="0" k2="1" k3="1" k4="0"/>',
+        "    </filter>",
+        '    <filter id="board-carve" x="-4%" y="-4%" width="108%" height="108%">',
+        '      <feDropShadow dx="0" dy="-0.9" stdDeviation="0.35" '
+        'flood-color="#2A3020" flood-opacity="0.55"/>',
+        '      <feDropShadow dx="0" dy="1" stdDeviation="0.35" '
+        'flood-color="#F2F6E6" flood-opacity="0.42"/>',
+        "    </filter>",
         "  </defs>",
     ]
 
@@ -274,44 +322,51 @@ def _line(x1, y1, x2, y2, color, width, cls=None) -> str:
 
 
 def _board_geometry_elements() -> list[str]:
-    """棋盘主体（不含背景）。"""
+    """棋盘主体（不含底板）。"""
     out: list[str] = []
 
-    # 极淡木纹高光，仅覆盖棋盘线框范围，不喧宾夺主
+    # 内嵌盘面：石板质感由 board-stone 滤镜推出浮雕与高光
+    bx, by, bw, bh = BORDER_OUTER
     out.append(
-        f'  <rect x="{X0}" y="{Y0}" width="{X1 - X0}" height="{Y1 - Y0}" '
-        f'fill="url(#board-sheen)"/>'
+        f'  <rect x="{n(bx)}" y="{n(by)}" width="{n(bw)}" height="{n(bh)}" '
+        f'rx="4" fill="url(#board-face)" filter="url(#board-stone)"/>'
+    )
+    # 盘面四周内阴影，让可下区域看起来嵌在石框里
+    out.append(
+        f'  <rect x="{n(bx)}" y="{n(by)}" width="{n(bw)}" height="{n(bh)}" '
+        f'rx="4" fill="none" stroke="{BOARD_SIDE}" stroke-width="7" opacity="0.38"/>'
     )
 
     # 内外边框
-    ix, iy, iw, ih = BORDER_INNER
-    ox, oy, ow, oh = BORDER_OUTER
     for (x, y, w, h) in (BORDER_INNER, BORDER_OUTER):
         out.append(
             f'  <rect x="{n(x)}" y="{n(y)}" width="{n(w)}" height="{n(h)}" '
             f'fill="none" stroke="{LINE_STRONG}" stroke-width="{n(BORDER_W)}" rx="3"/>'
         )
 
+    # 刻线统一挂 board-carve 滤镜，做出「上暗下亮」的凹槽
+    carve = ' filter="url(#board-carve)"'
+
     # 横线
-    out.append('  <g class="grid-horizontal">')
+    out.append(f'  <g class="grid-horizontal"{carve}>')
     for (x1, y1, x2, y2) in H_LINES:
         out.append("  " + _line(x1, y1, x2, y2, LINE, LINE_W, "grid-line"))
     out.append("  </g>")
 
     # 竖线
-    out.append('  <g class="grid-vertical">')
+    out.append(f'  <g class="grid-vertical"{carve}>')
     for (x1, y1, x2, y2) in V_LINES:
         out.append("  " + _line(x1, y1, x2, y2, LINE, LINE_W, "grid-line"))
     out.append("  </g>")
 
     # 九宫斜线
-    out.append('  <g class="palace">')
+    out.append(f'  <g class="palace"{carve}>')
     for (x1, y1, x2, y2) in PALACE_DIAGONALS:
         out.append("  " + _line(x1, y1, x2, y2, LINE, LINE_W, "palace-line"))
     out.append("  </g>")
 
     # 兵炮位标记
-    out.append('  <g class="marks">')
+    out.append(f'  <g class="marks"{carve}>')
     for kind, col, row, corners in MARK_GROUPS:
         out.append(
             f'    <g class="mark-point" data-kind="{kind}" data-col="{col}" data-row="{row}">'
@@ -325,8 +380,8 @@ def _board_geometry_elements() -> list[str]:
         out.append("    </g>")
     out.append("  </g>")
 
-    # 河界文字
-    out.append('  <g class="river-text">')
+    # 河界文字也走刻线滤镜，做出嵌进石头里的效果
+    out.append(f'  <g class="river-text"{carve}>')
     for x, text in ((RIVER_LEFT_X, "楚 河"), (RIVER_RIGHT_X, "汉 界")):
         out.append(
             f'  <text x="{x}" y="{RIVER_Y}" text-anchor="middle" dominant-baseline="central" '
@@ -339,21 +394,32 @@ def _board_geometry_elements() -> list[str]:
 
 
 def build_board_classic() -> str:
-    body = [
-        f'  <rect x="0" y="0" width="{BOARD_W}" height="{BOARD_H}" '
-        f'fill="{WOOD}" rx="6"/>',
-    ]
+    body: list[str] = []
     body += _defs_block()
+    # 板身厚度：整块石板下移一段，露出底部侧边
+    body.append(
+        f'  <rect x="0" y="7" width="{BOARD_W}" height="{BOARD_H}" rx="12" '
+        f'fill="{BOARD_SIDE}"/>'
+    )
+    # 凸起的厚石框，内嵌盘面画在其上
+    body.append(
+        f'  <rect x="0" y="0" width="{BOARD_W}" height="{BOARD_H}" rx="12" '
+        f'fill="url(#board-frame)"/>'
+    )
     body += _board_geometry_elements()
     return svg_doc(BOARD_W, BOARD_H, body)
 
 
 def build_board_coords() -> str:
     w, h = 590, 630
-    body = [
-        f'  <rect x="0" y="0" width="{w}" height="{h}" fill="{WOOD}" rx="6"/>',
-    ]
+    body: list[str] = []
     body += _defs_block()
+    body.append(
+        f'  <rect x="0" y="7" width="{w}" height="{h}" rx="12" fill="{BOARD_SIDE}"/>'
+    )
+    body.append(
+        f'  <rect x="0" y="0" width="{w}" height="{h}" rx="12" fill="url(#board-frame)"/>'
+    )
     body += _board_geometry_elements()
 
     body.append('  <g class="coords">')
@@ -385,46 +451,70 @@ PIECE_STROKE_W = 2.4
 PIECE_RING_W = 1.1
 PIECE_FONT_SIZE = 30
 
+PIECE_SHADOW_DY = 3.6
+PIECE_SHADOW_BLUR = 3.2
+PIECE_SHADOW_OPACITY = 0.42
+
 FACTIONS = {
-    "red": {"stroke": RED_STROKE, "text": RED_STROKE, "fill": RED_FILL, "inner": RED_INNER},
-    "black": {"stroke": BLACK_STROKE, "text": BLACK_STROKE, "fill": BLACK_FILL, "inner": BLACK_INNER},
+    "red": {"text": RED_STROKE},
+    "black": {"text": BLACK_STROKE},
 }
 
 PIECES = [
-    ("red_king", "帅", "red"),
+    ("red_king", "帥", "red"),
     ("red_advisor", "仕", "red"),
     ("red_elephant", "相", "red"),
-    ("red_horse", "马", "red"),
-    ("red_chariot", "车", "red"),
+    ("red_horse", "傌", "red"),
+    ("red_chariot", "俥", "red"),
     ("red_cannon", "炮", "red"),
     ("red_pawn", "兵", "red"),
-    ("black_general", "将", "black"),
+    ("black_general", "將", "black"),
     ("black_advisor", "士", "black"),
     ("black_elephant", "象", "black"),
-    ("black_horse", "马", "black"),
-    ("black_chariot", "车", "black"),
-    ("black_cannon", "炮", "black"),
+    ("black_horse", "馬", "black"),
+    ("black_chariot", "車", "black"),
+    ("black_cannon", "砲", "black"),
     ("black_pawn", "卒", "black"),
 ]
 
 
-def build_piece(char: str, faction: str) -> str:
+def build_piece(name: str, char: str, faction: str) -> str:
+    """暖金木牌：侧壁撑出厚度，顶面走径向渐变做出弧面高光，字是凹刻的。
+
+    渐变与滤镜的 id 带棋子名，保证 14 枚棋子内联到同一文档时不冲突。
+    """
     p = FACTIONS[faction]
+    dome = f"piece-dome-{name}"
+    shadow = f"piece-shadow-{name}"
     body = [
         "  <defs>",
-        '    <filter id="piece-shadow" x="-25%" y="-25%" width="150%" height="150%">',
-        '      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#000000" flood-opacity="0.18"/>',
+        f'    <radialGradient id="{dome}" cx="34%" cy="26%" r="78%">',
+        f'      <stop offset="0%" stop-color="{PIECE_TOP_HI}"/>',
+        f'      <stop offset="78%" stop-color="{PIECE_TOP_LO}"/>',
+        f'      <stop offset="100%" stop-color="{PIECE_TOP_EDGE}"/>',
+        "    </radialGradient>",
+        f'    <filter id="{shadow}" x="-30%" y="-30%" width="160%" height="175%">',
+        f'      <feDropShadow dx="0" dy="{n(PIECE_SHADOW_DY)}" '
+        f'stdDeviation="{n(PIECE_SHADOW_BLUR)}" flood-color="#000000" '
+        f'flood-opacity="{n(PIECE_SHADOW_OPACITY)}"/>',
         "    </filter>",
         "  </defs>",
-        f'  <circle cx="32" cy="32" r="{n(PIECE_R)}" fill="{p["fill"]}" filter="url(#piece-shadow)"/>',
-        f'  <circle cx="32" cy="32" r="{n(PIECE_R)}" fill="none" stroke="{p["stroke"]}" '
-        f'stroke-width="{n(PIECE_STROKE_W)}"/>',
+        # 1) 侧壁：圆牌整体下移一段，露出底部一道深色侧边，形成厚度
+        f'  <circle cx="32" cy="{n(32 + PIECE_SHADOW_DY)}" r="{n(PIECE_R)}" '
+        f'fill="{PIECE_SIDE}" filter="url(#{shadow})"/>',
+        # 2) 顶面 + 外圈线
+        f'  <circle cx="32" cy="32" r="{n(PIECE_R)}" fill="url(#{dome})" '
+        f'stroke="{PIECE_RING}" stroke-width="{n(PIECE_STROKE_W)}"/>',
+        # 3) 内凹槽线
         f'  <circle cx="32" cy="32" r="{n(PIECE_INNER_RING_R)}" fill="none" '
-        f'stroke="{p["stroke"]}" stroke-width="{n(PIECE_RING_W)}"/>',
-        f'  <circle cx="32" cy="32" r="{n(PIECE_INNER_FILL_R)}" fill="{p["inner"]}"/>',
+        f'stroke="{PIECE_GROOVE}" stroke-width="{n(PIECE_RING_W)}"/>',
+        # 4) 内凹底
+        f'  <circle cx="32" cy="32" r="{n(PIECE_INNER_FILL_R)}" fill="{PIECE_WELL}"/>',
+        # 凹刻字：浅色描边垫在字底下，形成凿刻的边
         f'  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" '
         f'font-family="{esc_attr(FONT_ZH)}" font-size="{PIECE_FONT_SIZE}" font-weight="700" '
-        f'fill="{p["text"]}">{esc(char)}</text>',
+        f'fill="{p["text"]}" stroke="{PIECE_TOP_HI}" stroke-width="1.15" paint-order="stroke">'
+        f'{esc(char)}</text>',
     ]
     return svg_doc(64, 64, body)
 
@@ -437,12 +527,14 @@ def build_piece(char: str, faction: str) -> str:
 def build_tokens() -> str:
     tokens = {
         "board": {
-            "wood": WOOD,
+            "side": BOARD_SIDE,
+            "face-highlight": BOARD_FACE_HI,
+            "face-shadow": BOARD_FACE_LO,
+            "frame-highlight": BOARD_FRAME_HI,
+            "frame-shadow": BOARD_FRAME_LO,
             "line": LINE,
             "line-strong": LINE_STRONG,
             "river-text": LINE,
-            "sheen-highlight": WOOD_SHEEN_HI,
-            "sheen-shadow": WOOD_SHEEN_LO,
             "grid-width": "1.6px",
             "border-width": "2.4px",
             "mark-width": "1.4px",
@@ -454,14 +546,17 @@ def build_tokens() -> str:
             "view-height": "620px",
         },
         "piece": {
-            "red": {
-                "stroke": RED_STROKE, "text": RED_STROKE,
-                "fill": RED_FILL, "inner-fill": RED_INNER,
+            "material": {
+                "side": PIECE_SIDE,
+                "top-highlight": PIECE_TOP_HI,
+                "top-shadow": PIECE_TOP_LO,
+                "top-edge": PIECE_TOP_EDGE,
+                "ring": PIECE_RING,
+                "groove": PIECE_GROOVE,
+                "well": PIECE_WELL,
             },
-            "black": {
-                "stroke": BLACK_STROKE, "text": BLACK_STROKE,
-                "fill": BLACK_FILL, "inner-fill": BLACK_INNER,
-            },
+            "red": {"text": RED_STROKE},
+            "black": {"text": BLACK_STROKE},
             "size": "64px",
             "radius": "29px",
             "ring-radius": "23.5px",
@@ -469,6 +564,8 @@ def build_tokens() -> str:
             "stroke-width": "2.4px",
             "ring-width": "1.1px",
             "font-size": "30px",
+            "shadow-offset-y": "3.6px",
+            "shadow-blur": "3.2px",
         },
         "state": {
             "selected": STATE["selected"],
@@ -547,22 +644,28 @@ def build_colors_md() -> str:
     # (分组, 前景, 背景, 说明, 用途分类)
     pairs = [
         # 棋盘
-        ("棋盘", LINE, WOOD, "棋盘线 / 河界文字", "大字"),
-        ("棋盘", LINE_STRONG, WOOD, "内外边框深线", "图形"),
-        ("棋盘", "#A0522D", WOOD, "坐标标注文字", "小字"),
+        ("棋盘", LINE, BOARD_FACE_LO, "棋格刻线 / 河界文字", "大字"),
+        ("棋盘", LINE_STRONG, BOARD_FACE_LO, "内外边框线", "图形"),
+        ("棋盘", "#A0522D", BOARD_FACE_LO, "坐标标注文字", "小字"),
         # 棋子
-        ("棋子", RED_STROKE, RED_FILL, "红方棋字 on 棋面底色", "大字"),
-        ("棋子", RED_STROKE, RED_INNER, "红方棋字 on 内圈", "大字"),
-        ("棋子", BLACK_STROKE, BLACK_FILL, "黑方棋字 on 棋面底色", "大字"),
-        ("棋子", BLACK_STROKE, BLACK_INNER, "黑方棋字 on 内圈", "大字"),
-        # 状态色（叠加在棋盘木色之上）
-        ("状态", STATE["selected"], WOOD, "选中高亮（纯色）", "图形"),
-        ("状态", composite_over(STATE["selected"], 0.55, WOOD), WOOD, "选中高亮（55% 合成后）", "图形"),
-        ("状态", STATE["legal-move"], WOOD, "合法落点", "图形"),
-        ("状态", STATE["capture-target"], WOOD, "吃子目标", "图形"),
-        ("状态", STATE["last-move"], WOOD, "上一步落点", "图形"),
-        ("状态", STATE["check"], WOOD, "将军警告", "图形"),
-        ("状态", STATE["hint-arrow"], WOOD, "推荐着法箭头", "图形"),
+        ("棋子", RED_STROKE, PIECE_TOP_HI, "红方棋字 on 牌面高光处", "大字"),
+        ("棋子", RED_STROKE, PIECE_WELL, "红方棋字 on 内凹底", "大字"),
+        ("棋子", BLACK_STROKE, PIECE_TOP_HI, "黑方棋字 on 牌面高光处", "大字"),
+        ("棋子", BLACK_STROKE, PIECE_WELL, "黑方棋字 on 内凹底", "大字"),
+        # 状态色（叠加在棋盘石面上）
+        ("状态", STATE["selected"], BOARD_FACE_LO, "选中高亮（纯色）", "图形"),
+        (
+            "状态",
+            composite_over(STATE["selected"], 0.55, BOARD_FACE_LO),
+            BOARD_FACE_LO,
+            "选中高亮（55% 合成后）",
+            "图形",
+        ),
+        ("状态", STATE["legal-move"], BOARD_FACE_LO, "合法落点", "图形"),
+        ("状态", STATE["capture-target"], BOARD_FACE_LO, "吃子目标", "图形"),
+        ("状态", STATE["last-move"], BOARD_FACE_LO, "上一步落点", "图形"),
+        ("状态", STATE["check"], BOARD_FACE_LO, "将军警告", "图形"),
+        ("状态", STATE["hint-arrow"], BOARD_FACE_LO, "推荐着法箭头", "图形"),
         # 战法评价色阶（浅底）
         ("战法评价", COACH["best"], UI["panel"], "优秀", "小字"),
         ("战法评价", COACH["good"], UI["panel"], "良好", "小字"),
@@ -625,19 +728,24 @@ def build_colors_md() -> str:
         A("")
 
     swatch_table("2. 棋盘配色", [
-        ("board.wood", WOOD, "棋盘木质底色"),
-        ("board.line", LINE, "棋格线 / 兵炮位标记 / 河界文字"),
-        ("board.line-strong", LINE_STRONG, "内外边框深线"),
-        ("board.sheen-highlight", WOOD_SHEEN_HI, "极淡木纹高光（0.55 透明度渐变起点）"),
-        ("board.sheen-shadow", WOOD_SHEEN_LO, "极淡木纹暗角（渐变终点，透明）"),
+        ("board.side", BOARD_SIDE, "板侧厚度 / 盘面暗部"),
+        ("board.face-highlight", BOARD_FACE_HI, "盘面高光（径向渐变起点）"),
+        ("board.face-shadow", BOARD_FACE_LO, "盘面暗角（径向渐变终点）"),
+        ("board.frame-highlight", BOARD_FRAME_HI, "凸起厚石框受光面"),
+        ("board.frame-shadow", BOARD_FRAME_LO, "凸起厚石框背光面"),
+        ("board.line", LINE, "棋格刻线 / 兵炮位标记 / 河界文字"),
+        ("board.line-strong", LINE_STRONG, "内外边框线"),
     ])
     swatch_table("3. 棋子配色", [
-        ("piece.red.stroke", RED_STROKE, "红方描边 + 文字"),
-        ("piece.red.fill", RED_FILL, "红方外圆底色"),
-        ("piece.red.inner-fill", RED_INNER, "红方内圈底色"),
-        ("piece.black.stroke", BLACK_STROKE, "黑方描边 + 文字"),
-        ("piece.black.fill", BLACK_FILL, "黑方外圆底色"),
-        ("piece.black.inner-fill", BLACK_INNER, "黑方内圈底色"),
+        ("piece.material.side", PIECE_SIDE, "侧壁（厚度所在）"),
+        ("piece.material.top-highlight", PIECE_TOP_HI, "牌面高光（径向渐变起点）"),
+        ("piece.material.top-shadow", PIECE_TOP_LO, "牌面中调（渐变 78% 处）"),
+        ("piece.material.top-edge", PIECE_TOP_EDGE, "牌面边缘倒角（渐变终点）"),
+        ("piece.material.ring", PIECE_RING, "外圈线"),
+        ("piece.material.groove", PIECE_GROOVE, "内凹槽线"),
+        ("piece.material.well", PIECE_WELL, "内凹底"),
+        ("piece.red.text", RED_STROKE, "红方字色"),
+        ("piece.black.text", BLACK_STROKE, "黑方字色"),
     ])
     swatch_table("4. 状态色", [
         ("state.selected", STATE["selected"], "选中高亮（叠加透明度 0.55）"),
@@ -799,7 +907,7 @@ def main() -> int:
     write_text("assets/board/board-classic.svg", build_board_classic())
     write_text("assets/board/board-coords.svg", build_board_coords())
     for name, char, faction in PIECES:
-        write_text(f"assets/pieces/{name}.svg", build_piece(char, faction))
+        write_text(f"assets/pieces/{name}.svg", build_piece(name, char, faction))
     write_text("assets/tokens/design-tokens.json", build_tokens())
     write_text("assets/tokens/colors.md", build_colors_md())
     print(f"  共写出 {len(WRITTEN)} 个文件")

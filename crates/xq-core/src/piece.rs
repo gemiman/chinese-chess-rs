@@ -111,18 +111,22 @@ impl PieceKind {
         Some((kind, color))
     }
 
-    /// 中文名称。红黑双方各有不同字形（如帅/将、相/象、兵/卒）。
+    /// 中文名称。红黑双方字形各不相同，采用传统异形字：
+    /// 红 `帥仕相傌俥炮兵`，黑 `將士象馬車砲卒`。
     pub const fn name_zh(self, color: Color) -> char {
         match (self, color) {
-            (PieceKind::King, Color::Red) => '帅',
-            (PieceKind::King, Color::Black) => '将',
+            (PieceKind::King, Color::Red) => '帥',
+            (PieceKind::King, Color::Black) => '將',
             (PieceKind::Advisor, Color::Red) => '仕',
             (PieceKind::Advisor, Color::Black) => '士',
             (PieceKind::Elephant, Color::Red) => '相',
             (PieceKind::Elephant, Color::Black) => '象',
-            (PieceKind::Horse, _) => '马',
-            (PieceKind::Chariot, _) => '车',
-            (PieceKind::Cannon, _) => '炮',
+            (PieceKind::Horse, Color::Red) => '傌',
+            (PieceKind::Horse, Color::Black) => '馬',
+            (PieceKind::Chariot, Color::Red) => '俥',
+            (PieceKind::Chariot, Color::Black) => '車',
+            (PieceKind::Cannon, Color::Red) => '炮',
+            (PieceKind::Cannon, Color::Black) => '砲',
             (PieceKind::Pawn, Color::Red) => '兵',
             (PieceKind::Pawn, Color::Black) => '卒',
         }
@@ -130,36 +134,31 @@ impl PieceKind {
 
     /// 从中文棋子字还原「棋子种类 + 颜色」。
     ///
-    /// 同时接受繁体异体字（`車` `馬` `砲` `帥` `將`）—— 棋谱在流传中两种写法
-    /// 都很常见，解析时不该因此失败。
-    ///
-    /// > 马 / 车 / 炮 红黑同字，此处一律返回 `Color::Red` 作为占位；调用方应
-    /// > 用 [`PieceKind::is_color_agnostic_glyph`] 判断是否需要用当前走子方覆盖。
-    pub const fn from_name_zh(ch: char) -> Option<(PieceKind, Color)> {
+    /// 颜色返回 `None` 表示该字形红黑同字，需由当前走子方决定 —— 只有通用简体
+    /// 写法 `车` `马` 如此，保留它们是为了容忍不区分异形字的输入习惯。
+    /// 其余字形（含 `帥` `將` `俥` `車` `傌` `馬` `炮` `砲`）自带颜色。
+    pub const fn from_name_zh(ch: char) -> Option<(PieceKind, Option<Color>)> {
         let r = match ch {
-            '帅' | '帥' => (PieceKind::King, Color::Red),
-            '将' | '將' => (PieceKind::King, Color::Black),
-            '仕' => (PieceKind::Advisor, Color::Red),
-            '士' => (PieceKind::Advisor, Color::Black),
-            '相' => (PieceKind::Elephant, Color::Red),
-            '象' => (PieceKind::Elephant, Color::Black),
-            '马' | '馬' => (PieceKind::Horse, Color::Red),
-            '车' | '車' => (PieceKind::Chariot, Color::Red),
-            '炮' | '砲' => (PieceKind::Cannon, Color::Red),
-            '兵' => (PieceKind::Pawn, Color::Red),
-            '卒' => (PieceKind::Pawn, Color::Black),
+            '帥' => (PieceKind::King, Some(Color::Red)),
+            '將' => (PieceKind::King, Some(Color::Black)),
+            '仕' => (PieceKind::Advisor, Some(Color::Red)),
+            '士' => (PieceKind::Advisor, Some(Color::Black)),
+            '相' => (PieceKind::Elephant, Some(Color::Red)),
+            '象' => (PieceKind::Elephant, Some(Color::Black)),
+            '傌' => (PieceKind::Horse, Some(Color::Red)),
+            '馬' => (PieceKind::Horse, Some(Color::Black)),
+            '俥' => (PieceKind::Chariot, Some(Color::Red)),
+            '車' => (PieceKind::Chariot, Some(Color::Black)),
+            '炮' => (PieceKind::Cannon, Some(Color::Red)),
+            '砲' => (PieceKind::Cannon, Some(Color::Black)),
+            '兵' => (PieceKind::Pawn, Some(Color::Red)),
+            '卒' => (PieceKind::Pawn, Some(Color::Black)),
+            // 简体通用写法：红黑同字，交由走子方决定颜色
+            '车' => (PieceKind::Chariot, None),
+            '马' => (PieceKind::Horse, None),
             _ => return None,
         };
         Some(r)
-    }
-
-    /// 该棋子是否红黑同字（马 / 车 / 炮）。
-    #[inline]
-    pub const fn is_color_agnostic_glyph(self) -> bool {
-        matches!(
-            self,
-            PieceKind::Horse | PieceKind::Chariot | PieceKind::Cannon
-        )
     }
 
     /// 该棋子是否按斜线前进（走法上纵向与横向位移均为固定值）。

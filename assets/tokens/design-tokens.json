@@ -1,11 +1,13 @@
 {
   "board": {
-    "wood": "#F3D9A4",
-    "line": "#8B5A2B",
-    "line-strong": "#6B4423",
-    "river-text": "#8B5A2B",
-    "sheen-highlight": "#FFF0CC",
-    "sheen-shadow": "#E9C88E",
+    "side": "#6B7661",
+    "face-highlight": "#DCE2D0",
+    "face-shadow": "#AFB79F",
+    "frame-highlight": "#AEB8A0",
+    "frame-shadow": "#7C886E",
+    "line": "#4E5642",
+    "line-strong": "#6F7A61",
+    "river-text": "#4E5642",
     "grid-width": "1.6px",
     "border-width": "2.4px",
     "mark-width": "1.4px",
@@ -17,17 +19,20 @@
     "view-height": "620px"
   },
   "piece": {
+    "material": {
+      "side": "#9F7638",
+      "top-highlight": "#F6E2B4",
+      "top-shadow": "#DCB673",
+      "top-edge": "#BC9250",
+      "ring": "#8E6829",
+      "groove": "#C39C58",
+      "well": "#EDD5A0"
+    },
     "red": {
-      "stroke": "#B3282D",
-      "text": "#B3282D",
-      "fill": "#FFF8F0",
-      "inner-fill": "#FCEDEA"
+      "text": "#B3282D"
     },
     "black": {
-      "stroke": "#1F2430",
-      "text": "#1F2430",
-      "fill": "#F5F6F8",
-      "inner-fill": "#EDEFF2"
+      "text": "#1F2430"
     },
     "size": "64px",
     "radius": "29px",
@@ -35,7 +40,9 @@
     "inner-radius": "21px",
     "stroke-width": "2.4px",
     "ring-width": "1.1px",
-    "font-size": "30px"
+    "font-size": "30px",
+    "shadow-offset-y": "3.6px",
+    "shadow-blur": "3.2px"
   },
   "state": {
     "selected": "#F5A623",

@@ -12,7 +12,7 @@
 <style>
 :root{
   /* 棋盘（assets/tokens/design-tokens.json · board） */
-  --wood:#F3D9A4; --line:#8B5A2B; --line-strong:#6B4423;
+  --wood:#ACB49C; --line:#4E5642; --line-strong:#6F7A61;
   /* 棋子 */
   --p-red:#B3282D; --p-black:#1F2430;
   /* 状态色 */
@@ -53,7 +53,7 @@ body{
 .brand{display:flex;align-items:center;gap:9px;font-family:var(--font-zh);
   font-size:20px;font-weight:700;letter-spacing:2px}
 .brand .mark{
-  width:28px;height:28px;border-radius:50%;background:#FFF8F0;border:2px solid var(--p-red);
+  width:28px;height:28px;border-radius:50%;background:#F6E2B4;border:2px solid var(--p-red);
   display:grid;place-items:center;color:var(--p-red);font-size:15px;font-weight:700;
   font-family:var(--font-zh);line-height:1;
 }
@@ -91,7 +91,7 @@ body{
 }
 .hero .logo{
   width:76px;height:76px;border-radius:50%;margin:0 auto 18px;
-  background:#FFF8F0;border:3px solid var(--p-red);display:grid;place-items:center;
+  background:#F6E2B4;border:3px solid var(--p-red);display:grid;place-items:center;
   font-family:var(--font-zh);font-size:40px;color:var(--p-red);font-weight:700;
   box-shadow:var(--sh-md);line-height:1;
 }
@@ -185,9 +185,9 @@ body{
 .avatar{
   width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
   font-family:var(--font-zh);font-size:17px;font-weight:700;flex:0 0 auto;
-  background:#FFF8F0;border:2px solid var(--p-red);color:var(--p-red);
+  background:#F6E2B4;border:2px solid var(--p-red);color:var(--p-red);
 }
-.avatar.black{background:#F5F6F8;border-color:var(--p-black);color:var(--p-black)}
+.avatar.black{background:#F6E2B4;border-color:var(--p-black);color:var(--p-black)}
 .player-bar .who{flex:1;min-width:0}
 .player-bar .who .name{font-size:13.5px;font-weight:600}
 .player-bar .who .meta{font-size:11.5px;color:var(--tx2)}
@@ -398,83 +398,220 @@ body{
 <!-- 棋盘与棋子的 SVG 定义（跨页面共用的 sprite） -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <filter id="piece-shadow" x="-25%" y="-25%" width="150%" height="150%">
-      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#000000" flood-opacity="0.18"/>
-    </filter>
     <marker id="arrow-head" viewBox="0 0 10 10" refX="8" refY="5"
             markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" class="hl-hint-head"/>
     </marker>
-        <g id="pc-red_king"><circle cx="32" cy="32" r="29" fill="#FFF8F0" filter="url(#piece-shadow)"/>
-  <circle cx="32" cy="32" r="29" fill="none" stroke="#B3282D" stroke-width="2.4"/>
-  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#B3282D" stroke-width="1.1"/>
-  <circle cx="32" cy="32" r="21" fill="#FCEDEA"/>
-  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#B3282D">帅</text></g>
-    <g id="pc-red_advisor"><circle cx="32" cy="32" r="29" fill="#FFF8F0" filter="url(#piece-shadow)"/>
-  <circle cx="32" cy="32" r="29" fill="none" stroke="#B3282D" stroke-width="2.4"/>
-  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#B3282D" stroke-width="1.1"/>
-  <circle cx="32" cy="32" r="21" fill="#FCEDEA"/>
-  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#B3282D">仕</text></g>
-    <g id="pc-red_elephant"><circle cx="32" cy="32" r="29" fill="#FFF8F0" filter="url(#piece-shadow)"/>
-  <circle cx="32" cy="32" r="29" fill="none" stroke="#B3282D" stroke-width="2.4"/>
-  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#B3282D" stroke-width="1.1"/>
-  <circle cx="32" cy="32" r="21" fill="#FCEDEA"/>
-  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#B3282D">相</text></g>
-    <g id="pc-red_horse"><circle cx="32" cy="32" r="29" fill="#FFF8F0" filter="url(#piece-shadow)"/>
-  <circle cx="32" cy="32" r="29" fill="none" stroke="#B3282D" stroke-width="2.4"/>
-  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#B3282D" stroke-width="1.1"/>
-  <circle cx="32" cy="32" r="21" fill="#FCEDEA"/>
-  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#B3282D">马</text></g>
-    <g id="pc-red_chariot"><circle cx="32" cy="32" r="29" fill="#FFF8F0" filter="url(#piece-shadow)"/>
-  <circle cx="32" cy="32" r="29" fill="none" stroke="#B3282D" stroke-width="2.4"/>
-  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#B3282D" stroke-width="1.1"/>
-  <circle cx="32" cy="32" r="21" fill="#FCEDEA"/>
-  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#B3282D">车</text></g>
-    <g id="pc-red_cannon"><circle cx="32" cy="32" r="29" fill="#FFF8F0" filter="url(#piece-shadow)"/>
-  <circle cx="32" cy="32" r="29" fill="none" stroke="#B3282D" stroke-width="2.4"/>
-  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#B3282D" stroke-width="1.1"/>
-  <circle cx="32" cy="32" r="21" fill="#FCEDEA"/>
-  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#B3282D">炮</text></g>
-    <g id="pc-red_pawn"><circle cx="32" cy="32" r="29" fill="#FFF8F0" filter="url(#piece-shadow)"/>
-  <circle cx="32" cy="32" r="29" fill="none" stroke="#B3282D" stroke-width="2.4"/>
-  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#B3282D" stroke-width="1.1"/>
-  <circle cx="32" cy="32" r="21" fill="#FCEDEA"/>
-  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#B3282D">兵</text></g>
-    <g id="pc-black_general"><circle cx="32" cy="32" r="29" fill="#F5F6F8" filter="url(#piece-shadow)"/>
-  <circle cx="32" cy="32" r="29" fill="none" stroke="#1F2430" stroke-width="2.4"/>
-  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#1F2430" stroke-width="1.1"/>
-  <circle cx="32" cy="32" r="21" fill="#EDEFF2"/>
-  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430">将</text></g>
-    <g id="pc-black_advisor"><circle cx="32" cy="32" r="29" fill="#F5F6F8" filter="url(#piece-shadow)"/>
-  <circle cx="32" cy="32" r="29" fill="none" stroke="#1F2430" stroke-width="2.4"/>
-  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#1F2430" stroke-width="1.1"/>
-  <circle cx="32" cy="32" r="21" fill="#EDEFF2"/>
-  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430">士</text></g>
-    <g id="pc-black_elephant"><circle cx="32" cy="32" r="29" fill="#F5F6F8" filter="url(#piece-shadow)"/>
-  <circle cx="32" cy="32" r="29" fill="none" stroke="#1F2430" stroke-width="2.4"/>
-  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#1F2430" stroke-width="1.1"/>
-  <circle cx="32" cy="32" r="21" fill="#EDEFF2"/>
-  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430">象</text></g>
-    <g id="pc-black_horse"><circle cx="32" cy="32" r="29" fill="#F5F6F8" filter="url(#piece-shadow)"/>
-  <circle cx="32" cy="32" r="29" fill="none" stroke="#1F2430" stroke-width="2.4"/>
-  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#1F2430" stroke-width="1.1"/>
-  <circle cx="32" cy="32" r="21" fill="#EDEFF2"/>
-  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430">马</text></g>
-    <g id="pc-black_chariot"><circle cx="32" cy="32" r="29" fill="#F5F6F8" filter="url(#piece-shadow)"/>
-  <circle cx="32" cy="32" r="29" fill="none" stroke="#1F2430" stroke-width="2.4"/>
-  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#1F2430" stroke-width="1.1"/>
-  <circle cx="32" cy="32" r="21" fill="#EDEFF2"/>
-  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430">车</text></g>
-    <g id="pc-black_cannon"><circle cx="32" cy="32" r="29" fill="#F5F6F8" filter="url(#piece-shadow)"/>
-  <circle cx="32" cy="32" r="29" fill="none" stroke="#1F2430" stroke-width="2.4"/>
-  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#1F2430" stroke-width="1.1"/>
-  <circle cx="32" cy="32" r="21" fill="#EDEFF2"/>
-  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430">炮</text></g>
-    <g id="pc-black_pawn"><circle cx="32" cy="32" r="29" fill="#F5F6F8" filter="url(#piece-shadow)"/>
-  <circle cx="32" cy="32" r="29" fill="none" stroke="#1F2430" stroke-width="2.4"/>
-  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#1F2430" stroke-width="1.1"/>
-  <circle cx="32" cy="32" r="21" fill="#EDEFF2"/>
-  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430">卒</text></g>
+        <g id="pc-red_king"><defs>
+    <radialGradient id="piece-dome-red_king" cx="34%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#F6E2B4"/>
+      <stop offset="78%" stop-color="#DCB673"/>
+      <stop offset="100%" stop-color="#BC9250"/>
+    </radialGradient>
+    <filter id="piece-shadow-red_king" x="-30%" y="-30%" width="160%" height="175%">
+      <feDropShadow dx="0" dy="3.6" stdDeviation="3.2" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <circle cx="32" cy="35.6" r="29" fill="#9F7638" filter="url(#piece-shadow-red_king)"/>
+  <circle cx="32" cy="32" r="29" fill="url(#piece-dome-red_king)" stroke="#8E6829" stroke-width="2.4"/>
+  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#C39C58" stroke-width="1.1"/>
+  <circle cx="32" cy="32" r="21" fill="#EDD5A0"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#B3282D" stroke="#F6E2B4" stroke-width="1.15" paint-order="stroke">帥</text></g>
+    <g id="pc-red_advisor"><defs>
+    <radialGradient id="piece-dome-red_advisor" cx="34%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#F6E2B4"/>
+      <stop offset="78%" stop-color="#DCB673"/>
+      <stop offset="100%" stop-color="#BC9250"/>
+    </radialGradient>
+    <filter id="piece-shadow-red_advisor" x="-30%" y="-30%" width="160%" height="175%">
+      <feDropShadow dx="0" dy="3.6" stdDeviation="3.2" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <circle cx="32" cy="35.6" r="29" fill="#9F7638" filter="url(#piece-shadow-red_advisor)"/>
+  <circle cx="32" cy="32" r="29" fill="url(#piece-dome-red_advisor)" stroke="#8E6829" stroke-width="2.4"/>
+  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#C39C58" stroke-width="1.1"/>
+  <circle cx="32" cy="32" r="21" fill="#EDD5A0"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#B3282D" stroke="#F6E2B4" stroke-width="1.15" paint-order="stroke">仕</text></g>
+    <g id="pc-red_elephant"><defs>
+    <radialGradient id="piece-dome-red_elephant" cx="34%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#F6E2B4"/>
+      <stop offset="78%" stop-color="#DCB673"/>
+      <stop offset="100%" stop-color="#BC9250"/>
+    </radialGradient>
+    <filter id="piece-shadow-red_elephant" x="-30%" y="-30%" width="160%" height="175%">
+      <feDropShadow dx="0" dy="3.6" stdDeviation="3.2" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <circle cx="32" cy="35.6" r="29" fill="#9F7638" filter="url(#piece-shadow-red_elephant)"/>
+  <circle cx="32" cy="32" r="29" fill="url(#piece-dome-red_elephant)" stroke="#8E6829" stroke-width="2.4"/>
+  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#C39C58" stroke-width="1.1"/>
+  <circle cx="32" cy="32" r="21" fill="#EDD5A0"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#B3282D" stroke="#F6E2B4" stroke-width="1.15" paint-order="stroke">相</text></g>
+    <g id="pc-red_horse"><defs>
+    <radialGradient id="piece-dome-red_horse" cx="34%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#F6E2B4"/>
+      <stop offset="78%" stop-color="#DCB673"/>
+      <stop offset="100%" stop-color="#BC9250"/>
+    </radialGradient>
+    <filter id="piece-shadow-red_horse" x="-30%" y="-30%" width="160%" height="175%">
+      <feDropShadow dx="0" dy="3.6" stdDeviation="3.2" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <circle cx="32" cy="35.6" r="29" fill="#9F7638" filter="url(#piece-shadow-red_horse)"/>
+  <circle cx="32" cy="32" r="29" fill="url(#piece-dome-red_horse)" stroke="#8E6829" stroke-width="2.4"/>
+  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#C39C58" stroke-width="1.1"/>
+  <circle cx="32" cy="32" r="21" fill="#EDD5A0"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#B3282D" stroke="#F6E2B4" stroke-width="1.15" paint-order="stroke">傌</text></g>
+    <g id="pc-red_chariot"><defs>
+    <radialGradient id="piece-dome-red_chariot" cx="34%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#F6E2B4"/>
+      <stop offset="78%" stop-color="#DCB673"/>
+      <stop offset="100%" stop-color="#BC9250"/>
+    </radialGradient>
+    <filter id="piece-shadow-red_chariot" x="-30%" y="-30%" width="160%" height="175%">
+      <feDropShadow dx="0" dy="3.6" stdDeviation="3.2" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <circle cx="32" cy="35.6" r="29" fill="#9F7638" filter="url(#piece-shadow-red_chariot)"/>
+  <circle cx="32" cy="32" r="29" fill="url(#piece-dome-red_chariot)" stroke="#8E6829" stroke-width="2.4"/>
+  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#C39C58" stroke-width="1.1"/>
+  <circle cx="32" cy="32" r="21" fill="#EDD5A0"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#B3282D" stroke="#F6E2B4" stroke-width="1.15" paint-order="stroke">俥</text></g>
+    <g id="pc-red_cannon"><defs>
+    <radialGradient id="piece-dome-red_cannon" cx="34%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#F6E2B4"/>
+      <stop offset="78%" stop-color="#DCB673"/>
+      <stop offset="100%" stop-color="#BC9250"/>
+    </radialGradient>
+    <filter id="piece-shadow-red_cannon" x="-30%" y="-30%" width="160%" height="175%">
+      <feDropShadow dx="0" dy="3.6" stdDeviation="3.2" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <circle cx="32" cy="35.6" r="29" fill="#9F7638" filter="url(#piece-shadow-red_cannon)"/>
+  <circle cx="32" cy="32" r="29" fill="url(#piece-dome-red_cannon)" stroke="#8E6829" stroke-width="2.4"/>
+  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#C39C58" stroke-width="1.1"/>
+  <circle cx="32" cy="32" r="21" fill="#EDD5A0"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#B3282D" stroke="#F6E2B4" stroke-width="1.15" paint-order="stroke">炮</text></g>
+    <g id="pc-red_pawn"><defs>
+    <radialGradient id="piece-dome-red_pawn" cx="34%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#F6E2B4"/>
+      <stop offset="78%" stop-color="#DCB673"/>
+      <stop offset="100%" stop-color="#BC9250"/>
+    </radialGradient>
+    <filter id="piece-shadow-red_pawn" x="-30%" y="-30%" width="160%" height="175%">
+      <feDropShadow dx="0" dy="3.6" stdDeviation="3.2" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <circle cx="32" cy="35.6" r="29" fill="#9F7638" filter="url(#piece-shadow-red_pawn)"/>
+  <circle cx="32" cy="32" r="29" fill="url(#piece-dome-red_pawn)" stroke="#8E6829" stroke-width="2.4"/>
+  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#C39C58" stroke-width="1.1"/>
+  <circle cx="32" cy="32" r="21" fill="#EDD5A0"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#B3282D" stroke="#F6E2B4" stroke-width="1.15" paint-order="stroke">兵</text></g>
+    <g id="pc-black_general"><defs>
+    <radialGradient id="piece-dome-black_general" cx="34%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#F6E2B4"/>
+      <stop offset="78%" stop-color="#DCB673"/>
+      <stop offset="100%" stop-color="#BC9250"/>
+    </radialGradient>
+    <filter id="piece-shadow-black_general" x="-30%" y="-30%" width="160%" height="175%">
+      <feDropShadow dx="0" dy="3.6" stdDeviation="3.2" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <circle cx="32" cy="35.6" r="29" fill="#9F7638" filter="url(#piece-shadow-black_general)"/>
+  <circle cx="32" cy="32" r="29" fill="url(#piece-dome-black_general)" stroke="#8E6829" stroke-width="2.4"/>
+  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#C39C58" stroke-width="1.1"/>
+  <circle cx="32" cy="32" r="21" fill="#EDD5A0"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430" stroke="#F6E2B4" stroke-width="1.15" paint-order="stroke">將</text></g>
+    <g id="pc-black_advisor"><defs>
+    <radialGradient id="piece-dome-black_advisor" cx="34%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#F6E2B4"/>
+      <stop offset="78%" stop-color="#DCB673"/>
+      <stop offset="100%" stop-color="#BC9250"/>
+    </radialGradient>
+    <filter id="piece-shadow-black_advisor" x="-30%" y="-30%" width="160%" height="175%">
+      <feDropShadow dx="0" dy="3.6" stdDeviation="3.2" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <circle cx="32" cy="35.6" r="29" fill="#9F7638" filter="url(#piece-shadow-black_advisor)"/>
+  <circle cx="32" cy="32" r="29" fill="url(#piece-dome-black_advisor)" stroke="#8E6829" stroke-width="2.4"/>
+  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#C39C58" stroke-width="1.1"/>
+  <circle cx="32" cy="32" r="21" fill="#EDD5A0"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430" stroke="#F6E2B4" stroke-width="1.15" paint-order="stroke">士</text></g>
+    <g id="pc-black_elephant"><defs>
+    <radialGradient id="piece-dome-black_elephant" cx="34%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#F6E2B4"/>
+      <stop offset="78%" stop-color="#DCB673"/>
+      <stop offset="100%" stop-color="#BC9250"/>
+    </radialGradient>
+    <filter id="piece-shadow-black_elephant" x="-30%" y="-30%" width="160%" height="175%">
+      <feDropShadow dx="0" dy="3.6" stdDeviation="3.2" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <circle cx="32" cy="35.6" r="29" fill="#9F7638" filter="url(#piece-shadow-black_elephant)"/>
+  <circle cx="32" cy="32" r="29" fill="url(#piece-dome-black_elephant)" stroke="#8E6829" stroke-width="2.4"/>
+  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#C39C58" stroke-width="1.1"/>
+  <circle cx="32" cy="32" r="21" fill="#EDD5A0"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430" stroke="#F6E2B4" stroke-width="1.15" paint-order="stroke">象</text></g>
+    <g id="pc-black_horse"><defs>
+    <radialGradient id="piece-dome-black_horse" cx="34%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#F6E2B4"/>
+      <stop offset="78%" stop-color="#DCB673"/>
+      <stop offset="100%" stop-color="#BC9250"/>
+    </radialGradient>
+    <filter id="piece-shadow-black_horse" x="-30%" y="-30%" width="160%" height="175%">
+      <feDropShadow dx="0" dy="3.6" stdDeviation="3.2" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <circle cx="32" cy="35.6" r="29" fill="#9F7638" filter="url(#piece-shadow-black_horse)"/>
+  <circle cx="32" cy="32" r="29" fill="url(#piece-dome-black_horse)" stroke="#8E6829" stroke-width="2.4"/>
+  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#C39C58" stroke-width="1.1"/>
+  <circle cx="32" cy="32" r="21" fill="#EDD5A0"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430" stroke="#F6E2B4" stroke-width="1.15" paint-order="stroke">馬</text></g>
+    <g id="pc-black_chariot"><defs>
+    <radialGradient id="piece-dome-black_chariot" cx="34%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#F6E2B4"/>
+      <stop offset="78%" stop-color="#DCB673"/>
+      <stop offset="100%" stop-color="#BC9250"/>
+    </radialGradient>
+    <filter id="piece-shadow-black_chariot" x="-30%" y="-30%" width="160%" height="175%">
+      <feDropShadow dx="0" dy="3.6" stdDeviation="3.2" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <circle cx="32" cy="35.6" r="29" fill="#9F7638" filter="url(#piece-shadow-black_chariot)"/>
+  <circle cx="32" cy="32" r="29" fill="url(#piece-dome-black_chariot)" stroke="#8E6829" stroke-width="2.4"/>
+  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#C39C58" stroke-width="1.1"/>
+  <circle cx="32" cy="32" r="21" fill="#EDD5A0"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430" stroke="#F6E2B4" stroke-width="1.15" paint-order="stroke">車</text></g>
+    <g id="pc-black_cannon"><defs>
+    <radialGradient id="piece-dome-black_cannon" cx="34%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#F6E2B4"/>
+      <stop offset="78%" stop-color="#DCB673"/>
+      <stop offset="100%" stop-color="#BC9250"/>
+    </radialGradient>
+    <filter id="piece-shadow-black_cannon" x="-30%" y="-30%" width="160%" height="175%">
+      <feDropShadow dx="0" dy="3.6" stdDeviation="3.2" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <circle cx="32" cy="35.6" r="29" fill="#9F7638" filter="url(#piece-shadow-black_cannon)"/>
+  <circle cx="32" cy="32" r="29" fill="url(#piece-dome-black_cannon)" stroke="#8E6829" stroke-width="2.4"/>
+  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#C39C58" stroke-width="1.1"/>
+  <circle cx="32" cy="32" r="21" fill="#EDD5A0"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430" stroke="#F6E2B4" stroke-width="1.15" paint-order="stroke">砲</text></g>
+    <g id="pc-black_pawn"><defs>
+    <radialGradient id="piece-dome-black_pawn" cx="34%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#F6E2B4"/>
+      <stop offset="78%" stop-color="#DCB673"/>
+      <stop offset="100%" stop-color="#BC9250"/>
+    </radialGradient>
+    <filter id="piece-shadow-black_pawn" x="-30%" y="-30%" width="160%" height="175%">
+      <feDropShadow dx="0" dy="3.6" stdDeviation="3.2" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <circle cx="32" cy="35.6" r="29" fill="#9F7638" filter="url(#piece-shadow-black_pawn)"/>
+  <circle cx="32" cy="32" r="29" fill="url(#piece-dome-black_pawn)" stroke="#8E6829" stroke-width="2.4"/>
+  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#C39C58" stroke-width="1.1"/>
+  <circle cx="32" cy="32" r="21" fill="#EDD5A0"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430" stroke="#F6E2B4" stroke-width="1.15" paint-order="stroke">卒</text></g>
   </defs>
 </svg>
 
@@ -622,133 +759,154 @@ body{
 
         <div class="board-shell">
           <svg class="board" viewBox="0 0 560 620" xmlns="http://www.w3.org/2000/svg">
-            <rect x="0" y="0" width="560" height="620" fill="#F3D9A4" rx="6"/>
-  <defs>
-    <radialGradient id="board-sheen" cx="35%" cy="28%" r="85%">
-      <stop offset="0%" stop-color="#FFF0CC" stop-opacity="0.55"/>
-      <stop offset="100%" stop-color="#E9C88E" stop-opacity="0"/>
+            <defs>
+    <radialGradient id="board-face" cx="34%" cy="26%" r="92%">
+      <stop offset="0%" stop-color="#DCE2D0"/>
+      <stop offset="100%" stop-color="#AFB79F"/>
     </radialGradient>
+    <linearGradient id="board-frame" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#AEB8A0"/>
+      <stop offset="100%" stop-color="#7C886E"/>
+    </linearGradient>
+    <filter id="board-stone" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="4" seed="11" stitchTiles="stitch" result="n"/>
+      <feDiffuseLighting in="n" lighting-color="#FFFFFF" surfaceScale="1.5" diffuseConstant="1.15" result="lit">
+        <feDistantLight azimuth="235" elevation="52"/>
+      </feDiffuseLighting>
+      <feComposite in="lit" in2="SourceGraphic" operator="arithmetic" k1="1.08" k2="0.01" k3="0.01" k4="0" result="base"/>
+      <feSpecularLighting in="n" surfaceScale="1.5" specularConstant="0.26" specularExponent="34" lighting-color="#FFFFFF" result="spec">
+        <feDistantLight azimuth="235" elevation="52"/>
+      </feSpecularLighting>
+      <feComposite in="spec" in2="base" operator="arithmetic" k1="0" k2="1" k3="1" k4="0"/>
+    </filter>
+    <filter id="board-carve" x="-4%" y="-4%" width="108%" height="108%">
+      <feDropShadow dx="0" dy="-0.9" stdDeviation="0.35" flood-color="#2A3020" flood-opacity="0.55"/>
+      <feDropShadow dx="0" dy="1" stdDeviation="0.35" flood-color="#F2F6E6" flood-opacity="0.42"/>
+    </filter>
   </defs>
-  <rect x="40" y="40" width="480" height="540" fill="url(#board-sheen)"/>
-  <rect x="34" y="34" width="492" height="552" fill="none" stroke="#6B4423" stroke-width="2.4" rx="3"/>
-  <rect x="28" y="28" width="504" height="564" fill="none" stroke="#6B4423" stroke-width="2.4" rx="3"/>
-  <g class="grid-horizontal">
-    <line class="grid-line" x1="40" y1="40" x2="520" y2="40" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="100" x2="520" y2="100" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="160" x2="520" y2="160" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="220" x2="520" y2="220" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="280" x2="520" y2="280" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="340" x2="520" y2="340" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="400" x2="520" y2="400" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="460" x2="520" y2="460" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="520" x2="520" y2="520" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="580" x2="520" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
+  <rect x="0" y="7" width="560" height="620" rx="12" fill="#6B7661"/>
+  <rect x="0" y="0" width="560" height="620" rx="12" fill="url(#board-frame)"/>
+  <rect x="28" y="28" width="504" height="564" rx="4" fill="url(#board-face)" filter="url(#board-stone)"/>
+  <rect x="28" y="28" width="504" height="564" rx="4" fill="none" stroke="#6B7661" stroke-width="7" opacity="0.38"/>
+  <rect x="34" y="34" width="492" height="552" fill="none" stroke="#6F7A61" stroke-width="2.4" rx="3"/>
+  <rect x="28" y="28" width="504" height="564" fill="none" stroke="#6F7A61" stroke-width="2.4" rx="3"/>
+  <g class="grid-horizontal" filter="url(#board-carve)">
+    <line class="grid-line" x1="40" y1="40" x2="520" y2="40" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="100" x2="520" y2="100" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="160" x2="520" y2="160" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="220" x2="520" y2="220" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="280" x2="520" y2="280" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="340" x2="520" y2="340" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="400" x2="520" y2="400" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="460" x2="520" y2="460" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="520" x2="520" y2="520" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="580" x2="520" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
   </g>
-  <g class="grid-vertical">
-    <line class="grid-line" x1="40" y1="40" x2="40" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="100" y1="40" x2="100" y2="280" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="100" y1="340" x2="100" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="160" y1="40" x2="160" y2="280" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="160" y1="340" x2="160" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="220" y1="40" x2="220" y2="280" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="220" y1="340" x2="220" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="280" y1="40" x2="280" y2="280" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="280" y1="340" x2="280" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="340" y1="40" x2="340" y2="280" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="340" y1="340" x2="340" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="400" y1="40" x2="400" y2="280" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="400" y1="340" x2="400" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="460" y1="40" x2="460" y2="280" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="460" y1="340" x2="460" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="520" y1="40" x2="520" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
+  <g class="grid-vertical" filter="url(#board-carve)">
+    <line class="grid-line" x1="40" y1="40" x2="40" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="100" y1="40" x2="100" y2="280" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="100" y1="340" x2="100" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="160" y1="40" x2="160" y2="280" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="160" y1="340" x2="160" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="220" y1="40" x2="220" y2="280" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="220" y1="340" x2="220" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="280" y1="40" x2="280" y2="280" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="280" y1="340" x2="280" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="340" y1="40" x2="340" y2="280" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="340" y1="340" x2="340" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="400" y1="40" x2="400" y2="280" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="400" y1="340" x2="400" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="460" y1="40" x2="460" y2="280" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="460" y1="340" x2="460" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="520" y1="40" x2="520" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
   </g>
-  <g class="palace">
-    <line class="palace-line" x1="220" y1="40" x2="340" y2="160" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="palace-line" x1="340" y1="40" x2="220" y2="160" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="palace-line" x1="220" y1="460" x2="340" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="palace-line" x1="340" y1="460" x2="220" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
+  <g class="palace" filter="url(#board-carve)">
+    <line class="palace-line" x1="220" y1="40" x2="340" y2="160" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="palace-line" x1="340" y1="40" x2="220" y2="160" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="palace-line" x1="220" y1="460" x2="340" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="palace-line" x1="340" y1="460" x2="220" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
   </g>
-  <g class="marks">
+  <g class="marks" filter="url(#board-carve)">
     <g class="mark-point" data-kind="soldier" data-col="0" data-row="3">
-      <polyline class="mark-corner" points="54,214 46,214 46,206" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="54,226 46,226 46,234" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="54,214 46,214 46,206" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="54,226 46,226 46,234" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="2" data-row="3">
-      <polyline class="mark-corner" points="146,214 154,214 154,206" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="146,226 154,226 154,234" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="174,214 166,214 166,206" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="174,226 166,226 166,234" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="146,214 154,214 154,206" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="146,226 154,226 154,234" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="174,214 166,214 166,206" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="174,226 166,226 166,234" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="4" data-row="3">
-      <polyline class="mark-corner" points="266,214 274,214 274,206" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="266,226 274,226 274,234" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="294,214 286,214 286,206" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="294,226 286,226 286,234" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="266,214 274,214 274,206" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="266,226 274,226 274,234" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="294,214 286,214 286,206" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="294,226 286,226 286,234" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="6" data-row="3">
-      <polyline class="mark-corner" points="386,214 394,214 394,206" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="386,226 394,226 394,234" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="414,214 406,214 406,206" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="414,226 406,226 406,234" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="386,214 394,214 394,206" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="386,226 394,226 394,234" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="414,214 406,214 406,206" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="414,226 406,226 406,234" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="8" data-row="3">
-      <polyline class="mark-corner" points="506,214 514,214 514,206" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="506,226 514,226 514,234" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="506,214 514,214 514,206" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="506,226 514,226 514,234" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="0" data-row="6">
-      <polyline class="mark-corner" points="54,394 46,394 46,386" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="54,406 46,406 46,414" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="54,394 46,394 46,386" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="54,406 46,406 46,414" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="2" data-row="6">
-      <polyline class="mark-corner" points="146,394 154,394 154,386" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="146,406 154,406 154,414" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="174,394 166,394 166,386" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="174,406 166,406 166,414" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="146,394 154,394 154,386" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="146,406 154,406 154,414" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="174,394 166,394 166,386" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="174,406 166,406 166,414" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="4" data-row="6">
-      <polyline class="mark-corner" points="266,394 274,394 274,386" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="266,406 274,406 274,414" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="294,394 286,394 286,386" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="294,406 286,406 286,414" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="266,394 274,394 274,386" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="266,406 274,406 274,414" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="294,394 286,394 286,386" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="294,406 286,406 286,414" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="6" data-row="6">
-      <polyline class="mark-corner" points="386,394 394,394 394,386" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="386,406 394,406 394,414" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="414,394 406,394 406,386" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="414,406 406,406 406,414" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="386,394 394,394 394,386" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="386,406 394,406 394,414" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="414,394 406,394 406,386" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="414,406 406,406 406,414" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="8" data-row="6">
-      <polyline class="mark-corner" points="506,394 514,394 514,386" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="506,406 514,406 514,414" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="506,394 514,394 514,386" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="506,406 514,406 514,414" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="cannon" data-col="1" data-row="2">
-      <polyline class="mark-corner" points="86,154 94,154 94,146" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="86,166 94,166 94,174" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="114,154 106,154 106,146" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="114,166 106,166 106,174" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="86,154 94,154 94,146" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="86,166 94,166 94,174" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="114,154 106,154 106,146" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="114,166 106,166 106,174" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="cannon" data-col="7" data-row="2">
-      <polyline class="mark-corner" points="446,154 454,154 454,146" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="446,166 454,166 454,174" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="474,154 466,154 466,146" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="474,166 466,166 466,174" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="446,154 454,154 454,146" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="446,166 454,166 454,174" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="474,154 466,154 466,146" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="474,166 466,166 466,174" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="cannon" data-col="1" data-row="7">
-      <polyline class="mark-corner" points="86,454 94,454 94,446" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="86,466 94,466 94,474" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="114,454 106,454 106,446" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="114,466 106,466 106,474" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="86,454 94,454 94,446" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="86,466 94,466 94,474" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="114,454 106,454 106,446" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="114,466 106,466 106,474" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="cannon" data-col="7" data-row="7">
-      <polyline class="mark-corner" points="446,454 454,454 454,446" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="446,466 454,466 454,474" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="474,454 466,454 466,446" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="474,466 466,466 466,474" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="446,454 454,454 454,446" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="446,466 454,466 454,474" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="474,454 466,454 466,446" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="474,466 466,466 466,474" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
   </g>
-  <g class="river-text">
-  <text x="180" y="310" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="26" letter-spacing="8" fill="#8B5A2B">楚 河</text>
-  <text x="380" y="310" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="26" letter-spacing="8" fill="#8B5A2B">汉 界</text>
+  <g class="river-text" filter="url(#board-carve)">
+  <text x="180" y="310" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="26" letter-spacing="8" fill="#4E5642">楚 河</text>
+  <text x="380" y="310" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="26" letter-spacing="8" fill="#4E5642">汉 界</text>
   </g>
 
             <g id="layer-highlight">
@@ -1037,133 +1195,154 @@ body{
       <div class="board-col">
         <div class="board-shell">
           <svg class="board" viewBox="0 0 560 620" xmlns="http://www.w3.org/2000/svg">
-            <rect x="0" y="0" width="560" height="620" fill="#F3D9A4" rx="6"/>
-  <defs>
-    <radialGradient id="board-sheen-rev" cx="35%" cy="28%" r="85%">
-      <stop offset="0%" stop-color="#FFF0CC" stop-opacity="0.55"/>
-      <stop offset="100%" stop-color="#E9C88E" stop-opacity="0"/>
+            <defs>
+    <radialGradient id="board-face-rev" cx="34%" cy="26%" r="92%">
+      <stop offset="0%" stop-color="#DCE2D0"/>
+      <stop offset="100%" stop-color="#AFB79F"/>
     </radialGradient>
+    <linearGradient id="board-frame-rev" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#AEB8A0"/>
+      <stop offset="100%" stop-color="#7C886E"/>
+    </linearGradient>
+    <filter id="board-stone-rev" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="4" seed="11" stitchTiles="stitch" result="n"/>
+      <feDiffuseLighting in="n" lighting-color="#FFFFFF" surfaceScale="1.5" diffuseConstant="1.15" result="lit">
+        <feDistantLight azimuth="235" elevation="52"/>
+      </feDiffuseLighting>
+      <feComposite in="lit" in2="SourceGraphic" operator="arithmetic" k1="1.08" k2="0.01" k3="0.01" k4="0" result="base"/>
+      <feSpecularLighting in="n" surfaceScale="1.5" specularConstant="0.26" specularExponent="34" lighting-color="#FFFFFF" result="spec">
+        <feDistantLight azimuth="235" elevation="52"/>
+      </feSpecularLighting>
+      <feComposite in="spec" in2="base" operator="arithmetic" k1="0" k2="1" k3="1" k4="0"/>
+    </filter>
+    <filter id="board-carve-rev" x="-4%" y="-4%" width="108%" height="108%">
+      <feDropShadow dx="0" dy="-0.9" stdDeviation="0.35" flood-color="#2A3020" flood-opacity="0.55"/>
+      <feDropShadow dx="0" dy="1" stdDeviation="0.35" flood-color="#F2F6E6" flood-opacity="0.42"/>
+    </filter>
   </defs>
-  <rect x="40" y="40" width="480" height="540" fill="url(#board-sheen-rev)"/>
-  <rect x="34" y="34" width="492" height="552" fill="none" stroke="#6B4423" stroke-width="2.4" rx="3"/>
-  <rect x="28" y="28" width="504" height="564" fill="none" stroke="#6B4423" stroke-width="2.4" rx="3"/>
-  <g class="grid-horizontal">
-    <line class="grid-line" x1="40" y1="40" x2="520" y2="40" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="100" x2="520" y2="100" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="160" x2="520" y2="160" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="220" x2="520" y2="220" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="280" x2="520" y2="280" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="340" x2="520" y2="340" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="400" x2="520" y2="400" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="460" x2="520" y2="460" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="520" x2="520" y2="520" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="40" y1="580" x2="520" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
+  <rect x="0" y="7" width="560" height="620" rx="12" fill="#6B7661"/>
+  <rect x="0" y="0" width="560" height="620" rx="12" fill="url(#board-frame-rev)"/>
+  <rect x="28" y="28" width="504" height="564" rx="4" fill="url(#board-face-rev)" filter="url(#board-stone-rev)"/>
+  <rect x="28" y="28" width="504" height="564" rx="4" fill="none" stroke="#6B7661" stroke-width="7" opacity="0.38"/>
+  <rect x="34" y="34" width="492" height="552" fill="none" stroke="#6F7A61" stroke-width="2.4" rx="3"/>
+  <rect x="28" y="28" width="504" height="564" fill="none" stroke="#6F7A61" stroke-width="2.4" rx="3"/>
+  <g class="grid-horizontal" filter="url(#board-carve-rev)">
+    <line class="grid-line" x1="40" y1="40" x2="520" y2="40" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="100" x2="520" y2="100" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="160" x2="520" y2="160" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="220" x2="520" y2="220" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="280" x2="520" y2="280" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="340" x2="520" y2="340" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="400" x2="520" y2="400" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="460" x2="520" y2="460" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="520" x2="520" y2="520" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="40" y1="580" x2="520" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
   </g>
-  <g class="grid-vertical">
-    <line class="grid-line" x1="40" y1="40" x2="40" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="100" y1="40" x2="100" y2="280" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="100" y1="340" x2="100" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="160" y1="40" x2="160" y2="280" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="160" y1="340" x2="160" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="220" y1="40" x2="220" y2="280" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="220" y1="340" x2="220" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="280" y1="40" x2="280" y2="280" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="280" y1="340" x2="280" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="340" y1="40" x2="340" y2="280" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="340" y1="340" x2="340" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="400" y1="40" x2="400" y2="280" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="400" y1="340" x2="400" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="460" y1="40" x2="460" y2="280" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="460" y1="340" x2="460" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="grid-line" x1="520" y1="40" x2="520" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
+  <g class="grid-vertical" filter="url(#board-carve-rev)">
+    <line class="grid-line" x1="40" y1="40" x2="40" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="100" y1="40" x2="100" y2="280" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="100" y1="340" x2="100" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="160" y1="40" x2="160" y2="280" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="160" y1="340" x2="160" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="220" y1="40" x2="220" y2="280" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="220" y1="340" x2="220" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="280" y1="40" x2="280" y2="280" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="280" y1="340" x2="280" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="340" y1="40" x2="340" y2="280" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="340" y1="340" x2="340" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="400" y1="40" x2="400" y2="280" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="400" y1="340" x2="400" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="460" y1="40" x2="460" y2="280" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="460" y1="340" x2="460" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="grid-line" x1="520" y1="40" x2="520" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
   </g>
-  <g class="palace">
-    <line class="palace-line" x1="220" y1="40" x2="340" y2="160" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="palace-line" x1="340" y1="40" x2="220" y2="160" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="palace-line" x1="220" y1="460" x2="340" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
-    <line class="palace-line" x1="340" y1="460" x2="220" y2="580" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="square"/>
+  <g class="palace" filter="url(#board-carve-rev)">
+    <line class="palace-line" x1="220" y1="40" x2="340" y2="160" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="palace-line" x1="340" y1="40" x2="220" y2="160" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="palace-line" x1="220" y1="460" x2="340" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
+    <line class="palace-line" x1="340" y1="460" x2="220" y2="580" stroke="#4E5642" stroke-width="1.6" stroke-linecap="square"/>
   </g>
-  <g class="marks">
+  <g class="marks" filter="url(#board-carve-rev)">
     <g class="mark-point" data-kind="soldier" data-col="0" data-row="3">
-      <polyline class="mark-corner" points="54,214 46,214 46,206" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="54,226 46,226 46,234" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="54,214 46,214 46,206" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="54,226 46,226 46,234" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="2" data-row="3">
-      <polyline class="mark-corner" points="146,214 154,214 154,206" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="146,226 154,226 154,234" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="174,214 166,214 166,206" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="174,226 166,226 166,234" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="146,214 154,214 154,206" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="146,226 154,226 154,234" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="174,214 166,214 166,206" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="174,226 166,226 166,234" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="4" data-row="3">
-      <polyline class="mark-corner" points="266,214 274,214 274,206" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="266,226 274,226 274,234" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="294,214 286,214 286,206" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="294,226 286,226 286,234" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="266,214 274,214 274,206" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="266,226 274,226 274,234" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="294,214 286,214 286,206" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="294,226 286,226 286,234" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="6" data-row="3">
-      <polyline class="mark-corner" points="386,214 394,214 394,206" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="386,226 394,226 394,234" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="414,214 406,214 406,206" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="414,226 406,226 406,234" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="386,214 394,214 394,206" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="386,226 394,226 394,234" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="414,214 406,214 406,206" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="414,226 406,226 406,234" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="8" data-row="3">
-      <polyline class="mark-corner" points="506,214 514,214 514,206" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="506,226 514,226 514,234" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="506,214 514,214 514,206" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="506,226 514,226 514,234" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="0" data-row="6">
-      <polyline class="mark-corner" points="54,394 46,394 46,386" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="54,406 46,406 46,414" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="54,394 46,394 46,386" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="54,406 46,406 46,414" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="2" data-row="6">
-      <polyline class="mark-corner" points="146,394 154,394 154,386" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="146,406 154,406 154,414" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="174,394 166,394 166,386" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="174,406 166,406 166,414" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="146,394 154,394 154,386" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="146,406 154,406 154,414" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="174,394 166,394 166,386" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="174,406 166,406 166,414" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="4" data-row="6">
-      <polyline class="mark-corner" points="266,394 274,394 274,386" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="266,406 274,406 274,414" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="294,394 286,394 286,386" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="294,406 286,406 286,414" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="266,394 274,394 274,386" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="266,406 274,406 274,414" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="294,394 286,394 286,386" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="294,406 286,406 286,414" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="6" data-row="6">
-      <polyline class="mark-corner" points="386,394 394,394 394,386" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="386,406 394,406 394,414" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="414,394 406,394 406,386" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="414,406 406,406 406,414" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="386,394 394,394 394,386" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="386,406 394,406 394,414" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="414,394 406,394 406,386" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="414,406 406,406 406,414" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="soldier" data-col="8" data-row="6">
-      <polyline class="mark-corner" points="506,394 514,394 514,386" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="506,406 514,406 514,414" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="506,394 514,394 514,386" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="506,406 514,406 514,414" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="cannon" data-col="1" data-row="2">
-      <polyline class="mark-corner" points="86,154 94,154 94,146" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="86,166 94,166 94,174" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="114,154 106,154 106,146" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="114,166 106,166 106,174" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="86,154 94,154 94,146" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="86,166 94,166 94,174" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="114,154 106,154 106,146" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="114,166 106,166 106,174" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="cannon" data-col="7" data-row="2">
-      <polyline class="mark-corner" points="446,154 454,154 454,146" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="446,166 454,166 454,174" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="474,154 466,154 466,146" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="474,166 466,166 466,174" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="446,154 454,154 454,146" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="446,166 454,166 454,174" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="474,154 466,154 466,146" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="474,166 466,166 466,174" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="cannon" data-col="1" data-row="7">
-      <polyline class="mark-corner" points="86,454 94,454 94,446" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="86,466 94,466 94,474" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="114,454 106,454 106,446" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="114,466 106,466 106,474" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="86,454 94,454 94,446" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="86,466 94,466 94,474" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="114,454 106,454 106,446" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="114,466 106,466 106,474" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
     <g class="mark-point" data-kind="cannon" data-col="7" data-row="7">
-      <polyline class="mark-corner" points="446,454 454,454 454,446" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="446,466 454,466 454,474" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="474,454 466,454 466,446" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
-      <polyline class="mark-corner" points="474,466 466,466 466,474" fill="none" stroke="#8B5A2B" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="446,454 454,454 454,446" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="446,466 454,466 454,474" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="474,454 466,454 466,446" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
+      <polyline class="mark-corner" points="474,466 466,466 466,474" fill="none" stroke="#4E5642" stroke-width="1.4" stroke-linecap="square"/>
     </g>
   </g>
-  <g class="river-text">
-  <text x="180" y="310" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="26" letter-spacing="8" fill="#8B5A2B">楚 河</text>
-  <text x="380" y="310" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="26" letter-spacing="8" fill="#8B5A2B">汉 界</text>
+  <g class="river-text" filter="url(#board-carve-rev)">
+  <text x="180" y="310" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="26" letter-spacing="8" fill="#4E5642">楚 河</text>
+  <text x="380" y="310" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="26" letter-spacing="8" fill="#4E5642">汉 界</text>
   </g>
             <g id="layer-pieces-review">
                             <use href="#pc-red_chariot" transform="translate(14,554) scale(0.8125)"/>   <!-- 车 a0 -->

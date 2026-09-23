@@ -106,16 +106,17 @@ def read_utf8(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def svg_inner(path: Path, strip_defs: bool) -> str:
-    """取出 <svg> 标签内部的内容。strip_defs 用于棋子（filter 只全局定义一次）。"""
+def svg_inner(path: Path) -> str:
+    """取出 <svg> 标签内部的内容，defs 一并保留。
+
+    棋盘的浮雕滤镜与棋子的渐变/投影都在 defs 里，剥掉会让立体效果全部失效；
+    各类 id 已按棋子名 / board- 前缀区分，内联到同一文档不会冲突。
+    """
     text = read_utf8(path)
     m = re.search(r"<svg\b[^>]*>(.*)</svg>", text, re.S)
     if not m:
         raise SystemExit(f"[FAIL] 无法解析 SVG：{path}")
-    inner = m.group(1)
-    if strip_defs:
-        inner = re.sub(r"<defs>.*?</defs>", "", inner, flags=re.S)
-    return inner.strip()
+    return m.group(1).strip()
 
 
 def build_piece_sprites() -> str:
@@ -124,7 +125,7 @@ def build_piece_sprites() -> str:
         path = ASSETS / "pieces" / f"{name}.svg"
         if not path.exists():
             raise SystemExit(f"[FAIL] 缺少棋子素材：{path}")
-        inner = svg_inner(path, strip_defs=True)
+        inner = svg_inner(path)
         parts.append(f'    <g id="pc-{name}">{inner}</g>')
     return "\n".join(parts)
 
@@ -152,7 +153,7 @@ def build_piece_layer() -> str:
 
 def assert_geometry(board_svg: str) -> None:
     """对素材几何做断言，避免原型悄悄偏离设计基线。"""
-    inner = svg_inner(ASSETS / "board" / "board-classic.svg", strip_defs=False)
+    inner = svg_inner(ASSETS / "board" / "board-classic.svg")
 
     h_lines = len(re.findall(r'<line[^>]*class="grid-line"[^>]*x1="40"[^>]*y1="(\d+)"[^>]*x2="520"',
                              inner))
@@ -282,7 +283,7 @@ def main() -> int:
 
     # ---- 校验 ----
     print(" 校验素材几何：")
-    board_inner = svg_inner(ASSETS / "board" / "board-classic.svg", strip_defs=False)
+    board_inner = svg_inner(ASSETS / "board" / "board-classic.svg")
     assert_geometry(board_inner)
     assert_pieces()
     print(" 校验高亮层与局面的一致性：")
@@ -292,14 +293,11 @@ def main() -> int:
     sprites = build_piece_sprites()
     pieces_layer = build_piece_layer()
 
-    # 复盘页需要第二份棋盘实例：给 gradient id 加后缀，避免同一文档内 id 冲突
-    board_inner_2 = re.sub(
-        r'(id="board-sheen"|url\(#board-sheen\))',
-        lambda m: m.group(0).replace("board-sheen", "board-sheen-rev"),
-        board_inner,
-    )
-    if "board-sheen-rev" not in board_inner_2:
-        raise SystemExit("[FAIL] 未能为第二份棋盘实例重命名 gradient id")
+    # 复盘页需要第二份棋盘实例：给全部 board-* 的 id 加后缀，避免同一文档内 id 冲突
+    board_inner_2 = re.sub(r'id="(board-[a-z-]+)"', r'id="\1-rev"', board_inner)
+    board_inner_2 = re.sub(r"url\(#(board-[a-z-]+)\)", r"url(#\1-rev)", board_inner_2)
+    if "-rev" not in board_inner_2:
+        raise SystemExit("[FAIL] 未能为第二份棋盘实例重命名 gradient/filter id")
 
     html = read_utf8(TEMPLATE)
     replacements = [

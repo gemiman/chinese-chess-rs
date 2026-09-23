@@ -284,7 +284,7 @@ export function SidePanel(props: SidePanelProps) {
             id="notation-input"
             value={text}
             onChange={(event) => setText(event.target.value)}
-            placeholder="如 炮二平五 / 马8进7 / h2e2"
+            placeholder="如 炮二平五 / 馬8进7 / h2e2"
             autoComplete="off"
             spellCheck={false}
             disabled={thinking}
@@ -344,11 +344,11 @@ export function SidePanel(props: SidePanelProps) {
             <span className="legend__swatch">
               <span className="legend__last" />
             </span>
-            方角标 = 上一着的起点与终点
+            柔光圆环 = 上一着的起点与终点
           </div>
         </div>
         <p className="muted" style={{ marginBottom: 0 }}>
-          每种状态都用「颜色 + 形状」双重区分 —— 仅靠颜色在木色棋盘上对比度不足。
+          每种状态都用「颜色 + 形状」双重区分 —— 仅靠颜色在石色棋盘上对比度不足。
         </p>
       </section>
 

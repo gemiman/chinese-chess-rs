@@ -12,7 +12,7 @@
 <style>
 :root{
   /* 棋盘（assets/tokens/design-tokens.json · board） */
-  --wood:#F3D9A4; --line:#8B5A2B; --line-strong:#6B4423;
+  --wood:#ACB49C; --line:#4E5642; --line-strong:#6F7A61;
   /* 棋子 */
   --p-red:#B3282D; --p-black:#1F2430;
   /* 状态色 */
@@ -53,7 +53,7 @@ body{
 .brand{display:flex;align-items:center;gap:9px;font-family:var(--font-zh);
   font-size:20px;font-weight:700;letter-spacing:2px}
 .brand .mark{
-  width:28px;height:28px;border-radius:50%;background:#FFF8F0;border:2px solid var(--p-red);
+  width:28px;height:28px;border-radius:50%;background:#F6E2B4;border:2px solid var(--p-red);
   display:grid;place-items:center;color:var(--p-red);font-size:15px;font-weight:700;
   font-family:var(--font-zh);line-height:1;
 }
@@ -91,7 +91,7 @@ body{
 }
 .hero .logo{
   width:76px;height:76px;border-radius:50%;margin:0 auto 18px;
-  background:#FFF8F0;border:3px solid var(--p-red);display:grid;place-items:center;
+  background:#F6E2B4;border:3px solid var(--p-red);display:grid;place-items:center;
   font-family:var(--font-zh);font-size:40px;color:var(--p-red);font-weight:700;
   box-shadow:var(--sh-md);line-height:1;
 }
@@ -185,9 +185,9 @@ body{
 .avatar{
   width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
   font-family:var(--font-zh);font-size:17px;font-weight:700;flex:0 0 auto;
-  background:#FFF8F0;border:2px solid var(--p-red);color:var(--p-red);
+  background:#F6E2B4;border:2px solid var(--p-red);color:var(--p-red);
 }
-.avatar.black{background:#F5F6F8;border-color:var(--p-black);color:var(--p-black)}
+.avatar.black{background:#F6E2B4;border-color:var(--p-black);color:var(--p-black)}
 .player-bar .who{flex:1;min-width:0}
 .player-bar .who .name{font-size:13.5px;font-weight:600}
 .player-bar .who .meta{font-size:11.5px;color:var(--tx2)}
@@ -398,9 +398,6 @@ body{
 <!-- 棋盘与棋子的 SVG 定义（跨页面共用的 sprite） -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <filter id="piece-shadow" x="-25%" y="-25%" width="150%" height="150%">
-      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#000000" flood-opacity="0.18"/>
-    </filter>
     <marker id="arrow-head" viewBox="0 0 10 10" refX="8" refY="5"
             markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" class="hl-hint-head"/>

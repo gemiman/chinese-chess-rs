@@ -6,14 +6,15 @@
  */
 
 :root {
-  /* 棋盘 */
-  --board-wood: #f3d9a4;
-  --board-line: #8b5a2b;
-  --board-shadow: #e9c88e;
+  /* 棋盘（石绿石板） */
+  --board-side: #79836e;
+  --board-face: #d8decc;
+  --board-line: #4e5642;
 
-  /* 棋子 */
+  /* 棋子（红黑材质相同，只差字色） */
   --piece-red: #b3282d;
   --piece-black: #1f2430;
+  --piece-top: #f6e2b4;
 
   /* 状态 */
   --state-selected: #f5a623;
@@ -232,7 +233,7 @@ body {
  *   合法落点(空)   → 实心圆点
  *   合法落点(吃子) → 空心圆环
  *   选中           → 粗琥珀环
- *   上一着         → 蓝色方角标
+ *   上一着         → 蓝色柔光圆环
  */
 
 .marker {
@@ -268,21 +269,21 @@ body {
   background: rgba(245, 166, 35, 0.18);
 }
 
-/* 上一着：方角标（形状区别于所有圆形标记）
+/* 上一着：细圆环，直径略大于棋子，只留一丝外发光
  *
  * 这一层压在棋子之上，所以不能填充 —— 填色会把棋子的字盖住。
- * 尺寸也略大于棋子，让方框整个露在棋子外圈。 */
+ * 形状与其它圆形标记的区别在那一丝柔光晕：其余标记都是硬边环。 */
 .board__layer--overlay {
   pointer-events: none;
 }
 
 .marker--last {
-  width: 12.4%;
+  width: 11.4%;
   aspect-ratio: 1 / 1;
-  border: 2.5px solid var(--state-last);
-  border-radius: 3px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(52, 152, 219, 0.62);
   background: none;
-  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 4px 0 rgba(52, 152, 219, 0.16);
 }
 
 /* ------------------------------------------------------------ 侧栏 */
@@ -534,10 +535,11 @@ body {
 }
 
 .legend__last {
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--state-last);
-  border-radius: 2px;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid rgba(52, 152, 219, 0.62);
+  border-radius: 50%;
+  box-shadow: 0 0 3px 0 rgba(52, 152, 219, 0.16);
 }
 
 /* 提示 / 错误 */

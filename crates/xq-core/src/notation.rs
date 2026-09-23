@@ -347,17 +347,16 @@ fn parse_desc(text: &str, side: Color) -> Result<MoveDesc, NotationError> {
 
     let mut i: usize;
 
-    // 校验棋子字与当前走子方是否匹配。马 / 车 / 炮 红黑同字，不做颜色校验；
-    // 帅/将、仕/士、相/象、兵/卒 各有专属字形，写错即视为非法记谱 ——
-    // 否则「帅五进一」会被误匹配到黑方的将。
-    let check_glyph =
-        |kind: PieceKind, glyph_color: Color, ch: char| -> Result<(), NotationError> {
-            if kind.is_color_agnostic_glyph() || glyph_color == side {
-                Ok(())
-            } else {
-                Err(NotationError::UnknownPieceChar(ch))
-            }
-        };
+    // 校验棋子字与当前走子方是否匹配。棋子绝大多数红黑异形（帥/將、俥/車、傌/馬…），
+    // 写错即视为非法记谱 —— 否则「帥五进一」会被误匹配到黑方的將。
+    // 只有通用简体写法「车」「马」红黑同字，颜色交由走子方决定。
+    let check_glyph = |glyph_color: Option<Color>, ch: char| -> Result<(), NotationError> {
+        match glyph_color {
+            None => Ok(()),
+            Some(c) if c == side => Ok(()),
+            Some(_) => Err(NotationError::UnknownPieceChar(ch)),
+        }
+    };
 
     // ---- 主体：棋子字 + 路数，或 序数 + 棋子字 ----
     let (subject, kind) = match parse_disambig(chars[0]) {
@@ -367,7 +366,7 @@ fn parse_desc(text: &str, side: Color) -> Result<MoveDesc, NotationError> {
             let ch = *chars.get(i).ok_or(NotationError::MissingPieceChar)?;
             let (kind, glyph_color) =
                 PieceKind::from_name_zh(ch).ok_or(NotationError::UnknownPieceChar(ch))?;
-            check_glyph(kind, glyph_color, ch)?;
+            check_glyph(glyph_color, ch)?;
             i += 1;
             (sub, kind)
         }
@@ -376,7 +375,7 @@ fn parse_desc(text: &str, side: Color) -> Result<MoveDesc, NotationError> {
             let ch = chars[0];
             let (kind, glyph_color) =
                 PieceKind::from_name_zh(ch).ok_or(NotationError::UnknownPieceChar(ch))?;
-            check_glyph(kind, glyph_color, ch)?;
+            check_glyph(glyph_color, ch)?;
             i = 1;
             let route = parse_numeral(chars.get(i).copied()).ok_or(NotationError::MissingRoute)?;
             if !(1..=9).contains(&route) {
@@ -434,32 +433,32 @@ mod tests {
     fn doc_examples() {
         // 红方「炮二平五」= h2 → e2
         assert_eq!(notation_of(START, "h2e2"), "炮二平五");
-        // 红方「马二进三」= h0 → g2（跟目标路数，不是格数）
-        assert_eq!(notation_of(START, "h0g2"), "马二进三");
+        // 红方「傌二进三」= h0 → g2（跟目标路数，不是格数）
+        assert_eq!(notation_of(START, "h0g2"), "傌二进三");
         // 红方「炮八平五」= b2 → e2
         assert_eq!(notation_of(START, "b2e2"), "炮八平五");
-        // 红方「马八进七」= b0 → c2
-        assert_eq!(notation_of(START, "b0c2"), "马八进七");
+        // 红方「傌八进七」= b0 → c2
+        assert_eq!(notation_of(START, "b0c2"), "傌八进七");
         // 红方「兵七进一」= c3 → c4（跟格数）
         assert_eq!(notation_of(START, "c3c4"), "兵七进一");
         // 红方「相三进五」= g0 → e2（跟目标路数）
         assert_eq!(notation_of(START, "g0e2"), "相三进五");
         // 红方「仕四进五」= f0 → e1（跟目标路数）
         assert_eq!(notation_of(START, "f0e1"), "仕四进五");
-        // 红方「帅五进一」= e0 → e1（跟格数 —— 若按「目标路数」会输出「帅五进五」）
-        assert_eq!(notation_of(START, "e0e1"), "帅五进一");
+        // 红方「帥五进一」= e0 → e1（跟格数 —— 若按「目标路数」会输出「帥五进五」）
+        assert_eq!(notation_of(START, "e0e1"), "帥五进一");
         // 红方车：a0 是九路，前进一格
-        assert_eq!(notation_of(START, "a0a1"), "车九进一");
-        assert_eq!(notation_of(START, "i0i1"), "车一进一");
+        assert_eq!(notation_of(START, "a0a1"), "俥九进一");
+        assert_eq!(notation_of(START, "i0i1"), "俥一进一");
     }
 
     /// 黑方用阿拉伯数字（路数与步数都是）。
     #[test]
     fn black_uses_arabic_numerals() {
         // 黑炮 h7 是 8 路，平到 e7（5 路）
-        assert_eq!(notation_of(START, "h7e7"), "炮8平5");
-        // 黑马 h9 是 8 路，进到 g7（7 路）—— 这是应对当头炮的标准着法
-        assert_eq!(notation_of(START, "h9g7"), "马8进7");
+        assert_eq!(notation_of(START, "h7e7"), "砲8平5");
+        // 黑馬 h9 是 8 路，进到 g7（7 路）—— 这是应对当头炮的标准着法
+        assert_eq!(notation_of(START, "h9g7"), "馬8进7");
         // 黑卒 a6 是 1 路，前进一格
         assert_eq!(notation_of(START, "a6a5"), "卒1进1");
     }
@@ -470,29 +469,29 @@ mod tests {
         // 黑卒 a6 → a5：黑方前进方向是 row 递减，故为「进」
         assert_eq!(notation_of(START, "a6a5"), "卒1进1");
 
-        // 黑车在 a7；红兵 e4 封住 e 列，避免两王照面
+        // 黑車在 a7；红兵 e4 封住 e 列，避免两王照面
         let fen = "4k4/9/r8/9/9/4P4/9/9/9/4K4 b - - 0 1";
         let pos = crate::fen::from_fen(fen).expect("FEN 应可解析");
         // a7 → a8：对黑方是后退（row 增大）
         let mv_back = Move::new(from_iccs("a7").unwrap(), from_iccs("a8").unwrap());
-        assert_eq!(pos.to_chinese_notation(mv_back).unwrap(), "车1退1");
+        assert_eq!(pos.to_chinese_notation(mv_back).unwrap(), "車1退1");
         // a7 → a6：向前走一格
         let mv_fwd = Move::new(from_iccs("a7").unwrap(), from_iccs("a6").unwrap());
-        assert_eq!(pos.to_chinese_notation(mv_fwd).unwrap(), "车1进1");
+        assert_eq!(pos.to_chinese_notation(mv_fwd).unwrap(), "車1进1");
     }
 
     /// 同线两子用「前 / 后」（红方 row 大者为前）。
     #[test]
     fn front_back_disambiguation_with_two_pieces() {
-        // 红方两车同在 e 列：e3（row 大 → 前）、e1（后）
+        // 红方两俥同在 e 列：e3（row 大 → 前）、e1（后）
         let fen = "4k4/9/9/9/9/9/4R4/9/4R4/4K4 w - - 0 1";
         let pos = crate::fen::from_fen(fen).unwrap();
 
         let front = Move::new(from_iccs("e3").unwrap(), from_iccs("e4").unwrap());
-        assert_eq!(pos.to_chinese_notation(front).unwrap(), "前车进一");
+        assert_eq!(pos.to_chinese_notation(front).unwrap(), "前俥进一");
 
         let back = Move::new(from_iccs("e1").unwrap(), from_iccs("e2").unwrap());
-        assert_eq!(pos.to_chinese_notation(back).unwrap(), "后车进一");
+        assert_eq!(pos.to_chinese_notation(back).unwrap(), "后俥进一");
     }
 
     /// 同线三子用「前 / 中 / 后」。
@@ -503,13 +502,13 @@ mod tests {
         let pos = crate::fen::from_fen(fen).unwrap();
 
         let front = Move::new(from_iccs("e5").unwrap(), from_iccs("e6").unwrap());
-        assert_eq!(pos.to_chinese_notation(front).unwrap(), "前车进一");
+        assert_eq!(pos.to_chinese_notation(front).unwrap(), "前俥进一");
 
         let middle = Move::new(from_iccs("e3").unwrap(), from_iccs("e4").unwrap());
-        assert_eq!(pos.to_chinese_notation(middle).unwrap(), "中车进一");
+        assert_eq!(pos.to_chinese_notation(middle).unwrap(), "中俥进一");
 
         let back = Move::new(from_iccs("e1").unwrap(), from_iccs("e2").unwrap());
-        assert_eq!(pos.to_chinese_notation(back).unwrap(), "后车进一");
+        assert_eq!(pos.to_chinese_notation(back).unwrap(), "后俥进一");
     }
 
     /// 同线五子用「前 / 二 / 三 / 四 / 后」。
@@ -543,15 +542,22 @@ mod tests {
         assert_eq!(pos.to_chinese_notation(mv).unwrap(), "炮八平五");
     }
 
-    /// 繁体异体字也能解析。
+    /// 异形字：红黑各写各的；通用简体「马」「车」仍可解析，颜色由走子方决定。
     #[test]
-    fn traditional_glyphs_are_accepted() {
+    fn distinctive_glyphs_are_accepted() {
         let mut pos = Position::startpos();
-        // 「馬二进三」是繁体的马二进三（动作字仍用简体）
-        assert!(pos.from_chinese_notation("馬二进三").is_ok());
-        // 繁体棋子字 + 标准动作字
-        let mv = pos.from_chinese_notation("馬二进三").unwrap();
+        // 红方马写作「傌」
+        let mv = pos.from_chinese_notation("傌二进三").unwrap();
         assert_eq!(pos.to_iccs_string(mv), "h0g2");
+        // 通用简体「马」红方同样解析得通
+        let mv2 = pos.from_chinese_notation("马二进三").unwrap();
+        assert_eq!(pos.to_iccs_string(mv2), "h0g2");
+
+        // 轮到黑方走，「馬」才有意义
+        let first = pos.from_chinese_notation("炮二平五").unwrap();
+        pos.make_move(first).unwrap();
+        let mv3 = pos.from_chinese_notation("馬8进7").unwrap();
+        assert_eq!(pos.to_iccs_string(mv3), "h9g7");
     }
 
     /// 往返：从初始局面枚举全部 44 步，逐个生成记谱再解析回来。
@@ -578,12 +584,12 @@ mod tests {
         let mut pos = Position::startpos();
         let expected = [
             ("炮二平五", "h2e2"),
-            ("炮8平5", "h7e7"),
-            ("马二进三", "h0g2"),
-            ("马8进7", "h9g7"),
-            ("车一平二", "i0h0"),
-            // 黑方 a9 车是「车1」，但 b9 被己方马占住，故只有 i9 车能动
-            ("车9平8", "i9h9"),
+            ("砲8平5", "h7e7"),
+            ("傌二进三", "h0g2"),
+            ("馬8进7", "h9g7"),
+            ("俥一平二", "i0h0"),
+            // 黑方 a9 車是「車1」，但 b9 被己方馬占住，故只有 i9 車能动
+            ("車9平8", "i9h9"),
             ("兵七进一", "c3c4"),
             ("卒7进1", "g6g5"),
         ];
@@ -636,7 +642,7 @@ mod tests {
         );
     }
 
-    /// 红黑字形不同：轮黑方走时写「帅」应被判为非法记谱，而不是误匹配到黑将。
+    /// 红黑异形：轮黑方走时写「帥」应被判为非法记谱，而不是误匹配到黑將。
     #[test]
     fn wrong_side_glyph_is_rejected() {
         let mut pos = Position::startpos();
@@ -646,11 +652,11 @@ mod tests {
         assert_eq!(pos.side_to_move(), Color::Black);
 
         assert_eq!(
-            pos.from_chinese_notation("帅五进一"),
-            Err(NotationError::UnknownPieceChar('帅')),
-            "黑方走子时不应接受红方的「帅」字"
+            pos.from_chinese_notation("帥五进一"),
+            Err(NotationError::UnknownPieceChar('帥')),
+            "黑方走子时不应接受红方的「帥」字"
         );
         // 同一个着法用黑方字形写就应当能解析
-        assert!(pos.from_chinese_notation("将5进1").is_ok());
+        assert!(pos.from_chinese_notation("將5进1").is_ok());
     }
 }
