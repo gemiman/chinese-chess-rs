@@ -1,0 +1,26 @@
+# ---- Rust / Cargo ----
+/target
+**/*.rs.bk
+*.pdb
+
+# ---- 前端 ----
+/frontend/node_modules
+/frontend/dist
+# 构建工具偶尔在 frontend/ 下留的空临时文件
+/frontend/_tmp_*
+
+# ---- Python 工具脚本 ----
+__pycache__/
+*.py[cod]
+
+# ---- 本地工具与临时产物 ----
+# .workbuddy/ 是本地协作工具目录（含截图与笔记），不入库
+.workbuddy/
+# Claude Code 的本机设置（权限允许列表等），仅本地有效
+.claude/settings.local.json
+
+# ---- 编辑器 / 操作系统 ----
+.DS_Store
+Thumbs.db
+*.swp
+*~

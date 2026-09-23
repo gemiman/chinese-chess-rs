@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <filter id="piece-shadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#000000" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <circle cx="32" cy="32" r="29" fill="#F5F6F8" filter="url(#piece-shadow)"/>
+  <circle cx="32" cy="32" r="29" fill="none" stroke="#1F2430" stroke-width="2.4"/>
+  <circle cx="32" cy="32" r="23.5" fill="none" stroke="#1F2430" stroke-width="1.1"/>
+  <circle cx="32" cy="32" r="21" fill="#EDEFF2"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="&quot;KaiTi&quot;,&quot;STKaiti&quot;,&quot;Noto Serif SC&quot;,serif" font-size="30" font-weight="700" fill="#1F2430">车</text>
+</svg>

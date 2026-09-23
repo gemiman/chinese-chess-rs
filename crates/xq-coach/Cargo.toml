@@ -1,0 +1,22 @@
+[package]
+name = "xq-coach"
+description = "中国象棋战法讲解引擎：战术识别、评价定级、模板渲染、LLM 增强接口。零 IO（知识库编译期内嵌）。"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+# 不变量 I-1（ADR-005）：领域层零 IO。
+#
+# 这里是三个领域层 crate 中**唯一**有第三方依赖的 —— 需要 serde/serde_json 解析
+# 编译期内嵌的知识库 JSON（`include_str!`）。两者都是纯计算库，不碰文件、网络、
+# 时钟，因此不违反零 IO 约束；CI 的依赖断言脚本也确认它们不在禁用列表内。
+#
+# 知识库走 `include_str!` 而不是运行时读文件，正是为了让「零 IO」成立：
+# 素材在编译期就进了二进制，运行时没有任何文件访问。
+[dependencies]
+# 需要 xq-core 的 serde feature，才能把 Color 等类型放进 CoachNote（对前端的契约）。
+xq-core = { workspace = true, features = ["serde"] }
+xq-ai = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

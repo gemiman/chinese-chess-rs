@@ -1,0 +1,590 @@
+{
+  "version": "1.0.0",
+  "status": "initial",
+  "note": "讲解模板库。渲染前必须校验占位符完整性——任一必需占位符缺失即放弃该模板并回退到降级链的下一级，绝不允许把 {xxx} 原样输出给用户。",
+  "placeholders": {
+    "allowed": [
+      "side", "notation", "piece_name", "captured_piece", "best_move_notation",
+      "score_loss", "level_text", "opening_name", "tactic_names", "best_reply_hint",
+      "threat_targets", "defended_piece"
+    ],
+    "required_always": ["side", "notation"],
+    "semantics": {
+      "side": "走子方，值为「红」或「黑」",
+      "notation": "本着的中文记谱，如「炮二平五」",
+      "piece_name": "走子的棋子名称，如「炮」「马」「车」",
+      "captured_piece": "被吃掉的棋子名称，如「卒」",
+      "best_move_notation": "引擎推荐着法的中文记谱",
+      "score_loss": "评分损失，单位厘兵（1 兵 = 100）",
+      "level_text": "评价等级文案，如「稍有问题」",
+      "opening_name": "匹配到的开局名称",
+      "tactic_names": "命中的战术名列表，顿号连接",
+      "best_reply_hint": "推荐应法的自然语言描述",
+      "threat_targets": "被威胁的棋子名称列表",
+      "defended_piece": "被保护的己方棋子名称"
+    }
+  },
+  "fallback_chain": [
+    { "level": 1, "id": "specific", "desc": "专用模板（精确战术 + 指定语体）" },
+    { "level": 2, "id": "category", "desc": "通用战术模板（按战术类别）" },
+    { "level": 3, "id": "level_generic", "desc": "通用着法模板（按评价等级）" },
+    { "level": 4, "id": "fallback", "desc": "兜底模板（仅输出记谱）" }
+  ],
+  "coverage_rule": "命中第 4 级（兜底）的着法不计入覆盖率统计。docs/01 FR-03.01 要求覆盖率 >= 95%。",
+  "templates": [
+    {
+      "id": "tpl.check",
+      "used_by": ["check"],
+      "headline": "{side}方 {notation}，将军。",
+      "detail": {
+        "concise": "直接威胁将帅，对方必须立即应对。",
+        "standard": "{piece_name}发起了将军，对方必须马上解将，暂时失去布局主动权。",
+        "verbose": "这一步将军打乱了对方的部署节奏。对方可以用移将、垫子或吃掉进攻棋子三种方式应对，其中{best_reply_hint}是最自然的应法。"
+      }
+    },
+    {
+      "id": "tpl.double_check",
+      "used_by": ["double_check"],
+      "headline": "{side}方 {notation}，双将！",
+      "detail": {
+        "concise": "两个棋子同时将军，对方只能移将。",
+        "standard": "同时受到两枚棋子的攻击，对方既不能垫子也无法吃子，只能移动将帅。",
+        "verbose": "双将是最强力的攻击形式之一。由于两路攻击同时存在，对方无论垫哪一边都无法同时化解，唯一的选择是把将帅挪开——这往往意味着放弃原有的防守位置。"
+      }
+    },
+    {
+      "id": "tpl.discovered_check",
+      "used_by": ["discovered_check"],
+      "headline": "{side}方 {notation}，闪将。",
+      "detail": {
+        "concise": "移开挡子后，身后的棋子形成将军。",
+        "standard": "{piece_name}让开后，原本被挡住的另一枚棋子直接对将帅形成威胁。",
+        "verbose": "闪将的妙处在于「一子动、两子用」：移动的棋子和被解放的棋子同时产生作用。移动的那枚棋子往往还能顺带完成吃子或占据要点的任务。"
+      }
+    },
+    {
+      "id": "tpl.capture",
+      "used_by": ["capture"],
+      "headline": "{side}方 {notation}，吃掉对方{captured_piece}。",
+      "detail": {
+        "concise": "吃子得利。",
+        "standard": "{piece_name}吃掉对方的{captured_piece}，双方子力对比发生变化。",
+        "verbose": "{piece_name}吃掉对方的{captured_piece}。需要注意吃子之后的保护问题——如果这枚棋子随后会被对方吃回，那么实际收益需要按交换的结果重新计算。"
+      }
+    },
+    {
+      "id": "tpl.mate",
+      "used_by": ["mate"],
+      "headline": "{side}方 {notation}，绝杀！",
+      "detail": {
+        "concise": "对方无法解将，对局结束。",
+        "standard": "这一着形成绝杀，对方将帅没有任何逃生路径，对局就此结束。",
+        "verbose": "绝杀意味着对方既不能吃子、也无法垫子，将帅的所有退路也都被封死。这一步的价值无法用子力衡量——它是本局的决定性着法。"
+      }
+    },
+    {
+      "id": "tpl.stalemate_win",
+      "used_by": ["stalemate_win"],
+      "headline": "{side}方 {notation}，形成困毙。",
+      "detail": {
+        "concise": "对方无子可走，判负。",
+        "standard": "对方虽然未被将军，但所有棋子都无法移动，按中国象棋规则判负。",
+        "verbose": "困毙是象棋中颇具特色的胜负形式：对方并未被将军，却因为所有着法都会导致被将而无法行动。按中国象棋规则，困毙方判负（这一点与国际象棋判和不同）。"
+      }
+    },
+    {
+      "id": "tpl.resolve_check",
+      "used_by": ["resolve_check"],
+      "headline": "{side}方 {notation}，解除将军。",
+      "detail": {
+        "concise": "化解了对方的将军。",
+        "standard": "这一步化解了对方的攻势，局面重新回到可控状态。",
+        "verbose": "解将之后，局面会暂时稳定下来。此时需要留意的是：对方发动这次将军是否本就为了争夺先手或调整子力位置，如果是，那么真正的考验才刚刚开始。"
+      }
+    },
+    {
+      "id": "tpl.interpose",
+      "used_by": ["interpose"],
+      "headline": "{side}方 {notation}，垫子解将。",
+      "detail": {
+        "concise": "在攻击线路上垫入棋子，阻断将军。",
+        "standard": "把{piece_name}放到将帅与进攻棋子之间，切断了对方的攻击线路。",
+        "verbose": "垫子是三种解将方式中最讲究的一种。它保住了将帅的位置，但同时把被垫的棋子置于攻击线上——如果对方的攻击子力价值高于垫子，这个交换是划算的。"
+      }
+    },
+    {
+      "id": "tpl.king_escape",
+      "used_by": ["king_escape"],
+      "headline": "{side}方 {notation}，将帅避让。",
+      "detail": {
+        "concise": "将帅挪开，避开攻击。",
+        "standard": "将帅移出被攻击的位置，化解了这次将军。",
+        "verbose": "移将是最直接的解将方式，但有代价：将帅一旦离开原来位置，原有的防守结构可能出现空隙，对方随后的着法可能正是冲着这个空隙来的。"
+      }
+    },
+    {
+      "id": "tpl.capture_attacker",
+      "used_by": ["capture_attacker"],
+      "headline": "{side}方 {notation}，吃掉将军的棋子。",
+      "detail": {
+        "concise": "直接吃掉进攻棋子解将。",
+        "standard": "吃掉正在将军的这枚棋子，从根本上化解了威胁。",
+        "verbose": "吃掉攻击者是解将方式中最主动的一种，因为它不仅化解了威胁，还削减了对方的子力。但前提是这枚棋子确实能够被安全吃掉——如果它身后有保护，就要重新计算交换结果。"
+      }
+    },
+
+    {
+      "id": "tpl.fork",
+      "used_by": ["fork"],
+      "headline": "{side}方 {notation}，捉双。",
+      "detail": {
+        "concise": "一步棋同时威胁对方两个棋子。",
+        "standard": "这一步同时威胁到对方的{threat_targets}，对方无法在同一着内全部保全。",
+        "verbose": "捉双的核心是「一子二用」：用一枚棋子同时制造两个威胁，让对方顾此失彼。对方只能选择保住其中价值更高的一个，另一个通常就会落入手中。"
+      }
+    },
+    {
+      "id": "tpl.pin",
+      "used_by": ["pin"],
+      "headline": "{side}方 {notation}，形成牵制。",
+      "detail": {
+        "concise": "对方棋子被钉住，动弹不得。",
+        "standard": "对方的{threat_targets}被我方棋子牵制，一旦移动就会暴露身后的重要目标。",
+        "verbose": "牵制的威力在于「不动也难受」：被牵制的棋子表面还在原地，实际上已经失去了行动自由。它的价值等于被冻结，我方可以放心在其他方向展开行动。"
+      }
+    },
+    {
+      "id": "tpl.skewer",
+      "used_by": ["skewer"],
+      "headline": "{side}方 {notation}，形成串打。",
+      "detail": {
+        "concise": "攻击线上的前子被迫移动，后子将被吃。",
+        "standard": "对方的{threat_targets}处在一条攻击线上，前一个被迫让开后，后一个就会被我方吃掉。",
+        "verbose": "串打与牵制恰好相反：牵制是「后子牵住前子」，串打是「前子挡住后子」。串打的收益通常更直接——对方让开之后，后面的目标马上就会暴露。"
+      }
+    },
+    {
+      "id": "tpl.discovered_attack",
+      "used_by": ["discovered_attack"],
+      "headline": "{side}方 {notation}，闪击。",
+      "detail": {
+        "concise": "移开挡子后，身后棋子形成攻击。",
+        "standard": "{piece_name}让开后，原来被挡住的棋子立刻对对方的{threat_targets}形成攻击。",
+        "verbose": "闪击是闪将的「非将军版本」——同样是移动一子解放另一子，区别在于被解放的棋子攻击的是普通棋子而非将帅。这种着法往往能在不损失任何子力的情况下白得便宜。"
+      }
+    },
+    {
+      "id": "tpl.threat",
+      "used_by": ["threat"],
+      "headline": "{side}方 {notation}，形成威胁。",
+      "detail": {
+        "concise": "为下一步的进攻做好了准备。",
+        "standard": "这一步为下一步的进攻埋下了伏笔，对方需要提前防范。",
+        "verbose": "威胁的价值往往比直接的进攻更大：它迫使对方被动应对，而应对本身就意味着要在其他方面做出让步。这就是「先手」的实质。"
+      }
+    },
+    {
+      "id": "tpl.blockade",
+      "used_by": ["blockade"],
+      "headline": "{side}方 {notation}，限制对方子力活动。",
+      "detail": {
+        "concise": "压缩了对方的活动空间。",
+        "standard": "这一步使对方的可选着法明显减少，子力被挤压在有限的空间内。",
+        "verbose": "象棋中「空间」是可以量化的：可选着法越少，可选择的余地就越小，被迫走坏棋的概率就越大。压缩空间是一种缓慢但极其有效的优势积累方式。"
+      }
+    },
+    {
+      "id": "tpl.exchange_offer",
+      "used_by": ["exchange_offer"],
+      "headline": "{side}方 {notation}，邀兑。",
+      "detail": {
+        "concise": "提出等价交换。",
+        "standard": "主动提出与对方{threat_targets}交换，用于简化局面或改善子力结构。",
+        "verbose": "邀兑是象棋中的常用手段。当己方子力位置不佳、或需要简化局面以巩固优势时，主动提出交换往往比被动等待更有利。"
+      }
+    },
+    {
+      "id": "tpl.sacrifice",
+      "used_by": ["sacrifice"],
+      "headline": "{side}方 {notation}，弃子抢攻。",
+      "detail": {
+        "concise": "主动送子，换取攻势或位置。",
+        "standard": "{piece_name}被主动置于可被吃掉的位置，但换取了攻势上的实质补偿。",
+        "verbose": "弃子是象棋中最具观赏性的手段。判断弃子是否成立，关键要看换来的补偿是否足以弥补子力损失——这通常体现为杀势、攻势或者子力位置的全面改善。"
+      }
+    },
+    {
+      "id": "tpl.win_material",
+      "used_by": ["win_material"],
+      "headline": "{side}方 {notation}，得子。",
+      "detail": {
+        "concise": "净赚子力。",
+        "standard": "这一着使{side}方净赚子力，评估提升约 {score_loss} 厘兵。",
+        "verbose": "子力优势是象棋中最实在的优势。不过需要注意：得子之后如果不能妥善守住优势，局面仍有可能被扳回，尤其是用大量子力换来的小便宜。"
+      }
+    },
+    {
+      "id": "tpl.lose_material",
+      "used_by": ["lose_material"],
+      "headline": "{side}方 {notation}，损失子力。",
+      "detail": {
+        "concise": "净损子力。",
+        "standard": "这一着使{side}方净损子力，评估下降约 {score_loss} 厘兵。",
+        "verbose": "子力损失在象棋中通常难以挽回。需要立刻判断：是接受这个损失转入防守，还是在其他方面争取补偿，两者往往必须马上做出选择。"
+      }
+    },
+    {
+      "id": "tpl.open_file",
+      "used_by": ["open_file"],
+      "headline": "{side}方 {notation}，打通纵线。",
+      "detail": {
+        "concise": "为车或炮打通了通道。",
+        "standard": "移开挡路的棋子后，己方车或炮获得了这条纵线的控制权。",
+        "verbose": "车和炮的威力高度依赖畅通的线路。打通一条纵线往往意味着这枚棋子从「受限」变为「活跃」，其战斗力的提升远超过一步棋的常规价值。"
+      }
+    },
+    {
+      "id": "tpl.central_control",
+      "used_by": ["central_control"],
+      "headline": "{side}方 {notation}，控制中路。",
+      "detail": {
+        "concise": "加强了对中路的控制。",
+        "standard": "这一着使{side}方在中路的控制力增强，对将帅前方的区域形成压力。",
+        "verbose": "中路是象棋棋盘上价值最高的通道——它直通对方将门。控制中路意味着可以在最短的距离上威胁对方，也为后续子力的调动提供了枢纽。"
+      }
+    },
+
+    {
+      "id": "tpl.horse_rear_cannon",
+      "used_by": ["horse_rear_cannon"],
+      "headline": "{side}方 {notation}，形成「马后炮」。",
+      "detail": {
+        "concise": "马作炮架，炮直取将门。",
+        "standard": "马与炮配合作战：马负责贴近将帅，炮则借马为炮架直取将门。",
+        "verbose": "马后炮是象棋的经典杀法之一。它的精妙之处在于马同时承担了两个角色——既是进攻的棋子，又是炮的炮架。这种「一子两用」使得对方很难同时化解两路威胁。"
+      }
+    },
+    {
+      "id": "tpl.horse_corner_check",
+      "used_by": ["horse_corner_check"],
+      "headline": "{side}方 {notation}，马踏九宫角。",
+      "detail": {
+        "concise": "马跳到九宫角将军。",
+        "standard": "马跳到对方九宫的角上将军，配合其他子力形成攻势。",
+        "verbose": "九宫角是马非常有价值的位置：从这个点出发，马可以控制九宫内的多个关键格，同时自身又不在将帅的直接攻击范围内。"
+      }
+    },
+    {
+      "id": "tpl.horse_slot_check",
+      "used_by": ["horse_slot_check"],
+      "headline": "{side}方 {notation}，卧槽马将军。",
+      "detail": {
+        "concise": "马深入底线侧翼将军。",
+        "standard": "马跃到对方底线的侧翼位置将军，逼近将门。",
+        "verbose": "卧槽马的特点是位置深入且难以驱赶。马一旦在此站稳，往往需要花费多个回合才能将其赶走，而这期间对方将帅始终处在被牵制的状态。"
+      }
+    },
+    {
+      "id": "tpl.double_cannon_stack",
+      "used_by": ["double_cannon_stack"],
+      "headline": "{side}方 {notation}，形成「重炮」。",
+      "detail": {
+        "concise": "双炮叠置，攻击力翻倍。",
+        "standard": "两枚炮置于同一条攻击线上，后炮以前炮为炮架，攻击力叠加。",
+        "verbose": "重炮的结构非常稳固：即使对方吃掉前面的炮，后面的炮依然保留攻击能力；如果不吃，则两炮的叠加威力难以抵挡。这种「连环」结构是象棋中的经典构思。"
+      }
+    },
+    {
+      "id": "tpl.heaven_earth_cannon",
+      "used_by": ["heaven_earth_cannon"],
+      "headline": "{side}方 {notation}，形成「天地炮」。",
+      "detail": {
+        "concise": "一中一底双炮协同。",
+        "standard": "一枚炮控制中路、一枚炮压住底线，形成上下呼应的攻势。",
+        "verbose": "天地炮的威力来自两个方向的夹击：中炮负责牵制，底炮负责封堵退路。对方往往只能顾及一边，另一边就会成为突破口。"
+      }
+    },
+    {
+      "id": "tpl.hollow_cannon",
+      "used_by": ["hollow_cannon"],
+      "headline": "{side}方 {notation}，形成「空头炮」。",
+      "detail": {
+        "concise": "中炮与将帅之间畅通无阻。",
+        "standard": "中路的炮与对方将帅之间没有任何棋子阻挡，形成持续威慑。",
+        "verbose": "空头炮的威慢在于它不能被简单地忽视——任何一枚棋子进入这条线路都可能成为炮架，反而帮了对方的忙。这种「不敢挡」的困境是空头炮最难应付的地方。"
+      }
+    },
+    {
+      "id": "tpl.iron_bolt",
+      "used_by": ["iron_bolt"],
+      "headline": "{side}方 {notation}，形成「铁门栓」。",
+      "detail": {
+        "concise": "中路牵制配合将门封锁。",
+        "standard": "中炮牵制住对方的中路防守，车则控制将门，使将帅无法脱身。",
+        "verbose": "铁门栓的关键在于中路与将门的双重封锁。对方的中路防守棋子被牵制而不能动，将门的通路又被车控制，形成的困境往往难以自行解开。"
+      }
+    },
+    {
+      "id": "tpl.twin_ghosts_door",
+      "used_by": ["twin_ghosts_door"],
+      "headline": "{side}方 {notation}，兵临九宫。",
+      "detail": {
+        "concise": "双点逼近，同时施压。",
+        "standard": "两枚棋子同时逼近对方九宫正面，形成双点威胁。",
+        "verbose": "「二鬼拍门」描述的是两枚棋子并肩逼近九宫的态势。由于两个威胁同时存在，对方往往只能应付其一，另一个就会转化为实际的攻势。"
+      }
+    },
+    {
+      "id": "tpl.double_chariot_alternate",
+      "used_by": ["double_chariot_alternate"],
+      "headline": "{side}方 {notation}，双车交替将军。",
+      "detail": {
+        "concise": "双车轮流将军，对方疲于应对。",
+        "standard": "两枚车交替发动将军，对方被迫连续应对，最终难以支撑。",
+        "verbose": "双车错的威力来自节奏：每一枚车将军之后，另一枚车立刻接着将军，对方的将帅在两翼之间来回奔波，始终没有喘息和调整的时间。"
+      }
+    },
+    {
+      "id": "tpl.smothered_palace",
+      "used_by": ["smothered_palace"],
+      "headline": "{side}方 {notation}，形成「闷宫」。",
+      "detail": {
+        "concise": "将帅被己方棋子堵死退路。",
+        "standard": "对方将帅的退路被自己的棋子全部占满，无法避让这次将军。",
+        "verbose": "闷宫是一种极具讽刺意味的杀法——堵死将帅退路的正是它自己的子力。这也提示我们：棋子挤在九宫附近并不总是好事，有时反而会成为负担。"
+      }
+    },
+    {
+      "id": "tpl.flank_tiger",
+      "used_by": ["flank_tiger"],
+      "headline": "{side}方 {notation}，车马从侧翼配合。",
+      "detail": {
+        "concise": "车马协同从侧翼进攻。",
+        "standard": "车与马从侧翼形成配合，对将帅构成立体攻势。",
+        "verbose": "车马配合是象棋中最常见也最难防守的组合之一：车负责直线控制和封锁，马负责跳跃式的威胁。两者的攻击方式互补，对方很难用单一手段同时化解。"
+      }
+    },
+    {
+      "id": "tpl.sea_bottom_moon",
+      "used_by": ["sea_bottom_moon"],
+      "headline": "{side}方 {notation}，车沉底线。",
+      "detail": {
+        "concise": "车深入底线，从后方施压。",
+        "standard": "车进至对方底线，从将帅后方方向形成攻势。",
+        "verbose": "「海底捞月」是残局中常见的杀法。车从后方切入，配合正面的子力，使将帅腹背受敌。这种着法在残局阶段尤其有效，因为子力稀少时防守空隙更难弥补。"
+      }
+    },
+    {
+      "id": "tpl.heart_pierce",
+      "used_by": ["heart_pierce"],
+      "headline": "{side}方 {notation}，弃车破士。",
+      "detail": {
+        "concise": "以车换士，撕开防线。",
+        "standard": "主动用{piece_name}吃掉对方中士，打破九宫的完整结构。",
+        "verbose": "「大刀剜心」的精髓在于用子力换取阵形的破绽。九宫的士象本是相互保护的整体，一旦被撕开一个缺口，后续子力就能从这个缺口源源不断地涌入。"
+      }
+    },
+
+    {
+      "id": "tpl.opening_central_cannon",
+      "used_by": ["opening_central_cannon"],
+      "headline": "{side}方 {notation}，布下中炮。",
+      "detail": {
+        "concise": "炮取中路，直指将门。",
+        "standard": "炮平到中路，直接对准对方将门，这是最主流的进攻型开局。",
+        "verbose": "中炮（也称当头炮）是象棋史上最经典的布局。它的思路非常直接：用炮在中路对对方的将门施加压力，同时为双马双车的出动创造条件。绝大多数象棋布局体系都是围绕中炮展开的。"
+      }
+    },
+    {
+      "id": "tpl.opening_screen_horse",
+      "used_by": ["opening_screen_horse"],
+      "headline": "{side}方 {notation}，布下「屏风马」。",
+      "detail": {
+        "concise": "双马并立中路两侧。",
+        "standard": "双马分居中路左右，形如屏风，是应对中炮最主流的防守体系。",
+        "verbose": "屏风马之所以得名，是因为两匹马并排立在河界附近，像一道屏风护住中路。这个阵形的优点在于防守扎实的同时保留了反弹的力量——马随时可以跃出反击。"
+      }
+    },
+    {
+      "id": "tpl.opening_pawn_probe",
+      "used_by": ["opening_pawn_probe"],
+      "headline": "{side}方 {notation}，仙人指路。",
+      "detail": {
+        "concise": "先挺兵试探对方应手。",
+        "standard": "先挺起一个兵来试探对方的布局意向，同时保留自己后续的变化选择。",
+        "verbose": "「仙人指路」这个名字很贴切地描述了它的作用：只走一步兵，看似轻描淡写，实则是在观察对方的反应。对方如果应对不当，红方可以顺势转为中炮强攻；对方如果应对稳健，红方也能从容布阵。"
+      }
+    },
+    {
+      "id": "tpl.opening_elephant",
+      "used_by": ["opening_elephant"],
+      "headline": "{side}方 {notation}，飞相局。",
+      "detail": {
+        "concise": "先飞相守中路。",
+        "standard": "先飞起相来加强中路的防守，属于稳健型的布局思路。",
+        "verbose": "飞相局体现的是一种「以静制动」的思路：不急于进攻，先把阵形摆得厚实，把选择权交给对方。这种布局在功力深厚的棋手之间很常见——它考验的是中后盘的功夫。"
+      }
+    },
+    {
+      "id": "tpl.opening_cross_palace_cannon",
+      "used_by": ["opening_cross_palace_cannon"],
+      "headline": "{side}方 {notation}，过宫炮。",
+      "detail": {
+        "concise": "炮越过宫区到另一侧。",
+        "standard": "炮从一侧越过将帅所在的宫区平移到另一侧，把兵力集中到一侧。",
+        "verbose": "过宫炮的思路是「集中优势于局部」。它放弃了在中路的直接对抗，转而在一侧集结子力，试图在局部形成以多打少的局面。"
+      }
+    },
+    {
+      "id": "tpl.opening_advisor_corner_cannon",
+      "used_by": ["opening_advisor_corner_cannon"],
+      "headline": "{side}方 {notation}，士角炮。",
+      "detail": {
+        "concise": "炮落仕角，灵活机动。",
+        "standard": "炮平到仕角的位置，兼顾中路与侧翼两个方向的变化。",
+        "verbose": "士角炮属于弹性布局：炮的位置既不完全放弃中路，也保留了向两翼转移的可能。它的价值在于「不表态」——把布局方向的决定权留到更晚的时候。"
+      }
+    },
+    {
+      "id": "tpl.opening_single_horse",
+      "used_by": ["opening_single_horse"],
+      "headline": "{side}方 {notation}，采用「单提马」布局。",
+      "detail": {
+        "concise": "一马正起、一马横起，阵形不对称。",
+        "standard": "两匹马以不同方式出动，形成不对称的阵形结构。",
+        "verbose": "单提马的特点是「不对称」。好处是变化多、不易被对方提前准备；代价是中路防守相对单薄，需要用炮和车来补位。"
+      }
+    },
+    {
+      "id": "tpl.opening_reverse_screen_horse",
+      "used_by": ["opening_reverse_screen_horse"],
+      "headline": "{side}方 {notation}，形成「反宫马」布局。",
+      "detail": {
+        "concise": "士角炮配合屏风马，以守待攻。",
+        "standard": "用士角炮配合屏风马构筑弹性防线，避免与中炮正面对攻。",
+        "verbose": "反宫马是为应对中炮而设计的防守体系。它不与对方的炮在中路硬碰，而是先稳固阵形，等对方的攻势消耗之后再寻找反击机会。"
+      }
+    },
+    {
+      "id": "tpl.opening_same_side_cannon",
+      "used_by": ["opening_same_side_cannon"],
+      "headline": "{side}方 {notation}，双方形成「顺炮」对攻。",
+      "detail": {
+        "concise": "双方中炮位于同侧。",
+        "standard": "双方的中炮位于同一侧，局面进入直接对攻的状态。",
+        "verbose": "顺炮是象棋中最具对攻性的布局之一。双方都不愿意防守，都想抢先发动攻势，因此局面的容错率很低——一步不慎就可能失去先手甚至落入下风。"
+      }
+    },
+    {
+      "id": "tpl.opening_opposite_cannon",
+      "used_by": ["opening_opposite_cannon"],
+      "headline": "{side}方 {notation}，双方形成「列炮」布局。",
+      "detail": {
+        "concise": "双方中炮位于异侧。",
+        "standard": "双方的中炮分列不同方向，各自在对方相对薄弱的侧翼寻找进攻机会。",
+        "verbose": "列炮的局面往往演变成两翼各自进攻的速度竞赛——谁能更快地在自己的进攻方向形成威胁，谁就能占据上风。"
+      }
+    },
+    {
+      "id": "tpl.opening_cannon_vs_screen_horse",
+      "used_by": [],
+      "headline": "{side}方 {notation}，布局进入「{opening_name}」。",
+      "detail": {
+        "concise": "红方中炮，黑方屏风马，主流布局。",
+        "standard": "红方以中炮取中路，黑方用屏风马稳固防守，这是象棋最主流的开局组合。",
+        "verbose": "「中炮对屏风马」是象棋数百年来最经典的开局对抗。红方主张进攻，黑方主张稳健，双方的战略意图都很明确。整个体系的变化极其丰富，是学习象棋布局的最好切入点。"
+      }
+    },
+    {
+      "id": "tpl.opening_cannon_vs_reverse_screen_horse",
+      "used_by": [],
+      "headline": "{side}方 {notation}，布局进入「{opening_name}」。",
+      "detail": {
+        "concise": "黑方以反宫马应对中炮。",
+        "standard": "面对红方中炮，黑方选择士角炮配合屏风马的柔性防御体系。",
+        "verbose": "反宫马体系中，黑方用士角炮替代常规的出车次序，目的是让阵形更有弹性。红方如果不能有效调动子力，攻势容易陷入僵持。"
+      }
+    },
+    {
+      "id": "tpl.opening_horse",
+      "used_by": [],
+      "headline": "{side}方 {notation}，起马局。",
+      "detail": {
+        "concise": "先出马，保持炮位灵活。",
+        "standard": "先出马而不急于确定炮的位置，保留布局方向的多种可能。",
+        "verbose": "起马局是一种「先出子、后定型」的柔性思路。它的好处是后续可以根据对方的布局调整自己的炮位，缺点是在子力出动速度上可能略慢。"
+      }
+    },
+
+    {
+      "id": "tpl.generic.best",
+      "used_by": [],
+      "headline": "{side}方 {notation}，最佳着法。",
+      "detail": {
+        "concise": "与引擎首选一致。",
+        "standard": "这是当前局面的最优着法，与引擎分析结果一致。",
+        "verbose": "这一步与引擎给出的首选着法完全一致。在当前局面下，它兼顾了子力安全与位置效益，是综合评分最高的选择。"
+      }
+    },
+    {
+      "id": "tpl.generic.good",
+      "used_by": [],
+      "headline": "{side}方 {notation}，不错的着法。",
+      "detail": {
+        "concise": "接近最优。",
+        "standard": "这一步与引擎首选仅差 {score_loss} 厘兵，属于合理的实战选择。",
+        "verbose": "这一步的评分比引擎首选低 {score_loss} 厘兵（约 {score_loss} / 100 个兵的价值），差距很小，在实战中完全可以接受。不同着法对应着不同的局面风格，选择权在棋手。"
+      }
+    },
+    {
+      "id": "tpl.generic.dubious",
+      "used_by": [],
+      "headline": "{side}方 {notation}，{level_text}。",
+      "detail": {
+        "concise": "评分损失约 {score_loss} 厘兵。",
+        "standard": "这一步的方向没有大问题，但与引擎首选相比损失了约 {score_loss} 厘兵，存在更优的选择。",
+        "verbose": "这一步本身不算错误，但相比之下不是最好的选择。评分损失约 {score_loss} 厘兵（约 {score_loss} / 100 个兵的价值）。在多数情况下，这个差距还不足以决定胜负，但如果局面本身已经很紧张，就需要格外谨慎。"
+      }
+    },
+    {
+      "id": "tpl.generic.blunder",
+      "used_by": [],
+      "headline": "{side}方 {notation}，{level_text}。",
+      "detail": {
+        "concise": "评分损失约 {score_loss} 厘兵。",
+        "standard": "这一步让局面明显变差，评分损失约 {score_loss} 厘兵。",
+        "verbose": "这一步是一个明显的失误，评分损失约 {score_loss} 厘兵（约 {score_loss} / 100 个兵的价值）。建议对照推荐的着法 {best_move_notation}，分析两者在子力安全和位置效益上的差别。"
+      }
+    },
+    {
+      "id": "tpl.generic.missed",
+      "used_by": [],
+      "headline": "{side}方 {notation}，{level_text}。",
+      "detail": {
+        "concise": "错失了明显更好的着法。",
+        "standard": "这一步错过了 {best_move_notation}，局面优势大幅缩小。",
+        "verbose": "这一步错失了一个重要的机会。如果改走 {best_move_notation}，局面会明显不同。评分损失约 {score_loss} 厘兵，是全局的关键转折点之一。"
+      }
+    },
+    {
+      "id": "tpl.fallback",
+      "used_by": [],
+      "is_fallback": true,
+      "headline": "{side}方 {notation}。",
+      "detail": {
+        "concise": "",
+        "standard": "",
+        "verbose": ""
+      },
+      "note": "兜底模板：仅输出记谱。命中此模板的着法不计入覆盖率统计（docs/05 §5.3）。"
+    }
+  ],
+  "statistics": {
+    "total": 54,
+    "specific_tactics": 35,
+    "opening_specific": 0,
+    "generic_level": 5,
+    "fallback": 1,
+    "note": "当前为结构完整的初始集（50 条）。docs/05 §10 的规模目标为 >= 120 条，缺口需在实现过程中按战术 × 语体组合逐步补齐。"
+  }
+}

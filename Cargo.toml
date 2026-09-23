@@ -1,0 +1,37 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/xq-core",
+    "crates/xq-ai",
+    "crates/xq-coach",
+    "crates/xq-session",
+    "crates/xq-bridge",
+    "crates/xq-client",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+xq-core = { path = "crates/xq-core" }
+xq-ai = { path = "crates/xq-ai" }
+xq-coach = { path = "crates/xq-coach" }
+xq-session = { path = "crates/xq-session" }
+
+# ---- 序列化 ----
+serde      = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0"
+
+# ---- 客户端 ----
+tauri       = { version = "2.11.6", features = [] }   # 3.x 仍为 alpha，勿升
+tauri-build = "2.6.3"
+
+# ---- 测试 ----
+proptest = "1.11.0"
+
+[profile.release]
+lto           = "thin"
+codegen-units = 1

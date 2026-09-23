@@ -1,0 +1,20 @@
+[package]
+name = "xq-session"
+description = "对局会话层：局面状态机、引擎门面、讲解门面，以及**对前端的 JSON 契约**。被 xq-bridge（开发用 HTTP 桥）与 xq-client（Tauri 桌面端）共用。"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+# 这不是领域层 crate —— 它属于「应用层」，允许使用线程与时钟
+# （搜索的看门线程要用 `thread::sleep`、耗时统计要用 `Instant`）。
+# ADR-005 的零 IO 约束只作用于 xq-core / xq-ai / xq-coach。
+#
+# 它存在的意义：让「换宿主」这件事真的只换一层。
+# 前端契约（DTO）与对局逻辑只有一份，HTTP 桥与 Tauri 客户端都薄薄地包一层。
+[dependencies]
+xq-core = { workspace = true }
+xq-ai = { workspace = true }
+xq-coach = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

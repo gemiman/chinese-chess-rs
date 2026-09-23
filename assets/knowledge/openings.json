@@ -1,0 +1,217 @@
+{
+  "version": "1.0.0",
+  "status": "initial",
+  "note": "开局定式库。sequence_iccs 为 ICCS 着法序列（列 a..i = 0..8，行 0 = 红方底线，红方先行）。匹配方式为前缀最长匹配，命中后由 xq-coach 输出战略意图讲解。",
+  "verification": {
+    "method": "每条序列的每一步均由人工按走法规则逐步核对（蹩马腿、塞象眼、路径阻挡、河界与九宫约束）。",
+    "verified_at": "2026-09-23",
+    "scope": "所有条目的 sequence_iccs 全长均已验证；战略意图文案为象棋常识性描述。",
+    "todo": "序列的『主流程度』与权重（出现频率）必须用真实棋谱统计标定后回写，当前未做统计标定。"
+  },
+  "coordinate_reference": {
+    "red_cannon": ["b2", "h2"],
+    "black_cannon": ["b7", "h7"],
+    "red_horse": ["b0", "h0"],
+    "black_horse": ["b9", "h9"],
+    "red_chariot": ["a0", "i0"],
+    "black_chariot": ["a9", "i9"],
+    "red_pawn": ["a3", "c3", "e3", "g3", "i3"],
+    "black_pawn": ["a6", "c6", "e6", "g6", "i6"]
+  },
+  "openings": [
+    {
+      "id": "central_cannon_vs_screen_horse",
+      "name": "中炮对屏风马",
+      "aliases": ["当头炮对屏风马"],
+      "sequence_iccs": ["h2e2", "h9g7", "h0g2", "i9h9", "i0h0", "b9c7", "b0c2", "a9b9"],
+      "sequence_names": ["炮二平五", "马8进7", "马二进三", "车9平8", "车一平二", "马2进3", "马八进七", "车1平2"],
+      "max_ply": 16,
+      "side": "both",
+      "popularity": "very_common",
+      "headline": "布局进入「中炮对屏风马」。",
+      "idea_red": "中炮直取中路，配合双马快速出动，争取中路主动权，双车分居两翼待机而动。",
+      "idea_black": "双马并立中路两侧形如屏风，稳固中路防守，两翼均衡发展，后发制人。",
+      "key_points": [
+        "红方中炮对黑方中卒形成长期压力",
+        "黑方需防止红车过河压马",
+        "双方争夺中路控制权是布局主线"
+      ],
+      "tags": ["中炮", "屏风马", "主流布局"],
+      "explanation_template": "tpl.opening_cannon_vs_screen_horse"
+    },
+    {
+      "id": "central_cannon_vs_reverse_screen_horse",
+      "name": "中炮对反宫马",
+      "aliases": ["中炮对反宫马"],
+      "sequence_iccs": ["h2e2", "h7f7", "h0g2", "h9g7"],
+      "sequence_names": ["炮二平五", "炮8平6", "马二进三", "马8进7"],
+      "max_ply": 12,
+      "side": "both",
+      "popularity": "common",
+      "headline": "布局进入「中炮对反宫马」。",
+      "idea_red": "以中炮强攻中路，争取先手扩大主动。",
+      "idea_black": "以士角炮配合屏风马构筑弹性防线，避开正面对攻，寻找反击机会。",
+      "key_points": [
+        "黑方士角炮兼顾中路与侧翼",
+        "注意士角炮可能限制己方左马出动"
+      ],
+      "tags": ["中炮", "反宫马", "防守体系"],
+      "explanation_template": "tpl.opening_cannon_vs_reverse_screen_horse"
+    },
+    {
+      "id": "pawn_probe",
+      "name": "仙人指路",
+      "aliases": ["挺兵局"],
+      "sequence_iccs": ["c3c4", "g6g5", "h0g2", "h9g7"],
+      "sequence_names": ["兵七进一", "卒7进1", "马二进三", "马8进7"],
+      "max_ply": 12,
+      "side": "red",
+      "popularity": "very_common",
+      "headline": "红方以「仙人指路」开局。",
+      "idea_red": "先挺起七兵试探对方应手，不急于定型，保留中炮、飞相、起马等多种后续变化。",
+      "idea_black": "以挺卒回应，保持局面均衡，观察红方下一步的布局方向。",
+      "key_points": [
+        "仙人指路的核心价值是保留变化",
+        "对方若应对不当，红方可能转为中炮强攻"
+      ],
+      "tags": ["仙人指路", "柔性开局", "试探"],
+      "explanation_template": "tpl.opening_pawn_probe"
+    },
+    {
+      "id": "elephant_opening",
+      "name": "飞相局",
+      "aliases": ["飞象局"],
+      "sequence_iccs": ["g0e2", "h9g7"],
+      "sequence_names": ["相三进五", "马8进7"],
+      "max_ply": 8,
+      "side": "red",
+      "popularity": "common",
+      "headline": "红方以「飞相局」开局，属于稳健型布局。",
+      "idea_red": "先飞相固守中路，把布局主动权让给对方，以阵形厚实换取后发制人的机会。",
+      "idea_black": "正常出动子力，避免过早定型。",
+      "key_points": [
+        "飞相局节奏较慢，考验中后盘的功力",
+        "红方需注意不要因过于保守而失先"
+      ],
+      "tags": ["飞相局", "稳健"],
+      "explanation_template": "tpl.opening_elephant"
+    },
+    {
+      "id": "cross_palace_cannon",
+      "name": "过宫炮",
+      "aliases": ["过宫炮开局"],
+      "sequence_iccs": ["h2d2", "h9g7"],
+      "sequence_names": ["炮二平六", "马8进7"],
+      "max_ply": 8,
+      "side": "red",
+      "popularity": "less_common",
+      "headline": "红方以「过宫炮」开局，把兵力集中于一侧。",
+      "idea_red": "炮从右翼越过将帅所在的宫区平到左侧，集中子力于一侧形成局部优势。",
+      "idea_black": "以常规出子应对，注意对应侧的防守密度。",
+      "key_points": [
+        "过宫炮并不直接攻中路，而是为侧翼进攻做准备",
+        "出子次序需注意不要让炮失去活动空间"
+      ],
+      "tags": ["过宫炮", "侧翼"],
+      "explanation_template": "tpl.opening_cross_palace_cannon"
+    },
+    {
+      "id": "advisor_corner_cannon",
+      "name": "士角炮",
+      "aliases": ["仕角炮"],
+      "sequence_iccs": ["b2d2", "h9g7"],
+      "sequence_names": ["炮八平六", "马8进7"],
+      "max_ply": 8,
+      "side": "red",
+      "popularity": "less_common",
+      "headline": "红方以「士角炮」开局，位置灵活多变。",
+      "idea_red": "炮平到仕角位置，既不完全放弃中路，又保留了向两翼转移的可能。",
+      "idea_black": "正常出子，观察红方炮的最终去向。",
+      "key_points": [
+        "士角炮是弹性布局，后续可转中炮或侧翼进攻"
+      ],
+      "tags": ["士角炮", "弹性布局"],
+      "explanation_template": "tpl.opening_advisor_corner_cannon"
+    },
+    {
+      "id": "single_horse",
+      "name": "单提马",
+      "aliases": ["起马局对单提马"],
+      "sequence_iccs": ["h2e2", "h9g7", "h0g2", "b9a7"],
+      "sequence_names": ["炮二平五", "马8进7", "马二进三", "马2进1"],
+      "max_ply": 12,
+      "side": "black",
+      "popularity": "less_common",
+      "headline": "黑方采用「单提马」应对，形成不对称布局。",
+      "idea_red": "以中炮施加中路压力，利用黑方阵形不对称寻找突破口。",
+      "idea_black": "一马正起、一马横起，阵形灵活但中路略显单薄，需要用炮和车补位。",
+      "key_points": [
+        "单提马的中路防守相对薄弱，需要格外留意",
+        "不对称阵形能衍生出较多变化"
+      ],
+      "tags": ["单提马", "不对称布局"],
+      "explanation_template": "tpl.opening_single_horse"
+    },
+    {
+      "id": "same_side_cannon",
+      "name": "顺炮",
+      "aliases": ["顺手炮"],
+      "sequence_iccs": ["h2e2", "h7e7"],
+      "sequence_names": ["炮二平五", "炮8平5"],
+      "max_ply": 10,
+      "side": "both",
+      "popularity": "very_common",
+      "headline": "双方形成「顺炮」，局面进入对攻格局。",
+      "idea_red": "先手中炮取得中路主动，争取快速出动子力扩大先手。",
+      "idea_black": "以中炮对中炮，同侧对攻，争夺中路控制权，棋风主动。",
+      "key_points": [
+        "顺炮是典型对攻布局，双方容错率都较低",
+        "中路争夺激烈，需注意将帅安全"
+      ],
+      "tags": ["顺炮", "对攻", "主流布局"],
+      "explanation_template": "tpl.opening_same_side_cannon"
+    },
+    {
+      "id": "opposite_cannon",
+      "name": "列炮",
+      "aliases": ["列手炮", "逆手炮"],
+      "sequence_iccs": ["h2e2", "b7e7"],
+      "sequence_names": ["炮二平五", "炮2平5"],
+      "max_ply": 10,
+      "side": "both",
+      "popularity": "common",
+      "headline": "双方形成「列炮」，各自争取一侧的进攻主动权。",
+      "idea_red": "中路压制的同时，准备在右翼展开攻势。",
+      "idea_black": "中炮对中炮但位置异侧，双方将在不同侧翼各自发展攻势。",
+      "key_points": [
+        "列炮局面通常演变为两翼各自进攻的速度竞赛",
+        "谁的速度更快、子力协调更好，谁就更可能占优"
+      ],
+      "tags": ["列炮", "对攻"],
+      "explanation_template": "tpl.opening_opposite_cannon"
+    },
+    {
+      "id": "horse_opening",
+      "name": "起马局",
+      "aliases": ["马二进三开局"],
+      "sequence_iccs": ["h0g2", "h9g7"],
+      "sequence_names": ["马二进三", "马8进7"],
+      "max_ply": 8,
+      "side": "red",
+      "popularity": "common",
+      "headline": "红方以「起马局」开局，平稳出动子力。",
+      "idea_red": "先出马而不急于定型炮位，保持布局的灵活性。",
+      "idea_black": "对称出动子力，保持局面均衡。",
+      "key_points": [
+        "起马局后续常转为屏风马或单提马体系"
+      ],
+      "tags": ["起马局", "柔性开局"],
+      "explanation_template": "tpl.opening_horse"
+    }
+  ],
+  "statistics": {
+    "total": 10,
+    "target": 200,
+    "note": "当前为初始集（10 条，序列全部人工验证）。docs/01 FR-03.05 要求 >= 200 条，缺口需在实现过程中通过棋谱库导入补齐，且导入数据必须先完成授权核实。"
+  }
+}

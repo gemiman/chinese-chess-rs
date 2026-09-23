@@ -1,0 +1,44 @@
+[package]
+name = "xq-client"
+description = "弈道桌面客户端（Tauri 2 外壳 + 前端宿主）。界面逻辑复用 xq-session，与 xq-bridge 共用同一份对局逻辑。"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+# Tauri 官方推荐的三件套：移动端需要 cdylib/staticlib，桌面只需要 lib。
+name = "xq_client_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { workspace = true }
+
+# ⚠️ 这一条**不是要用 indexmap**，而是为了逼 indexmap 1.x 打开 `std` feature。
+#
+# 依赖链：`tauri-build` → `tauri-utils` → `schemars 0.8`（开了 `preserve_order`）
+# → `indexmap 1.9.3`。
+#
+# indexmap 1.9.3 的 build.rs 用「运行时探测」判断有没有 std：
+#
+#     match env::var_os("CARGO_FEATURE_STD") {
+#         Some(_) => autocfg::emit("has_std"),                   // 显式开了 std → 走这条
+#         None    => autocfg::new().emit_sysroot_crate("std"),   // 否则靠探测 ← 脆弱
+#     }
+#
+# 探测失败时 `has_std` 不置上 → indexmap 按 **no_std** 编译 →
+# `IndexMap<K, V, S>` **失去默认类型参数** → 而 schemars 写的是
+# `indexmap::IndexMap<K, V>`（两个参数）→ 报 E0107。
+#
+# 实测（2026-09-23，本机）：在 WorkBuddy 沙箱内构建时，build script 派生 rustc
+# 子进程会被拦，这个探测**必然失败**（build script 的 stderr 留痕：
+# ``warning: autocfg could not probe for `std` ``），于是 schemars 编译不过。
+#
+# 显式打开 `std` 让它走上面第一条分支，**完全不依赖探测结果**。
+# 我们只构建 std 目标，这个 feature 本来就应该开着 —— 这么写只是把它写明确。
+indexmap = { version = "1.9", features = ["std"] }
+
+[dependencies]
+tauri = { workspace = true }
+xq-ai = { workspace = true }
+xq-session = { workspace = true }

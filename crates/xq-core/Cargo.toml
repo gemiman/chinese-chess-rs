@@ -1,0 +1,22 @@
+[package]
+name = "xq-core"
+description = "中国象棋规则内核：走法生成、局面表示、终局判定、FEN 与中文记谱。零 IO、零运行时依赖。"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+# 不变量 I-1（ADR-005）：本 crate 不依赖任何 IO / 运行时 crate。
+# 连 `rand` 都不引入 —— Zobrist 用内置的 SplitMix64 生成，见 src/zobrist.rs。
+[dependencies]
+# 可选：让公开类型可序列化（下游 xq-coach / xq-protocol 需要）。
+# docs/02 §3.1 的依赖规则 R1 明确允许「serde（可选 feature）」。
+# 默认关闭，所以默认构建仍然是零依赖。
+serde = { workspace = true, optional = true }
+
+[features]
+default = []
+serde = ["dep:serde"]
+
+[dev-dependencies]
+proptest.workspace = true

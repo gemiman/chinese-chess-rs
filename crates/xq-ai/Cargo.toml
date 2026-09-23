@@ -1,0 +1,15 @@
+[package]
+name = "xq-ai"
+description = "中国象棋搜索引擎：迭代加深、PVS、静态搜索、置换表、着法排序、五档难度。零 IO、零外部依赖。"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+# 不变量 I-1（ADR-005）：本 crate 同样不依赖任何 IO / 运行时 crate。
+#
+# 连 `rand` 都不引入 —— 难度随机化需要的是「显式种子 + 可复现」，
+# 内置 SplitMix64 即可满足，而且能把「不引入系统随机」变成代码结构保证
+# （不存在 `thread_rng` 可调用）。与 `xq-core` 的 Zobrist 处理一致。
+[dependencies]
+xq-core = { workspace = true }

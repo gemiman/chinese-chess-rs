@@ -1,0 +1,25 @@
+{
+  "name": "yidao-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "弈道 · 中国象棋 —— 前端（React + Vite + TS）",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.1",
+    "@vitejs/plugin-react-swc": "^4.2.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.7"
+  }
+}

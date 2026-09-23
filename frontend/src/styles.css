@@ -1,0 +1,898 @@
+/*
+ * 弈道 · 前端样式
+ *
+ * 变量全部抄自 assets/tokens/design-tokens.json —— 这里不发明新颜色。
+ * 若令牌改动，本文件是唯一需要同步的地方。
+ */
+
+:root {
+  /* 棋盘 */
+  --board-wood: #f3d9a4;
+  --board-line: #8b5a2b;
+  --board-shadow: #e9c88e;
+
+  /* 棋子 */
+  --piece-red: #b3282d;
+  --piece-black: #1f2430;
+
+  /* 状态 */
+  --state-selected: #f5a623;
+  --state-legal: #2ecc71;
+  --state-capture: #e74c3c;
+  --state-last: #3498db;
+  --state-check: #d0021b;
+  --coach-best: #27ae60;
+  --coach-good: #2e86de;
+  --coach-dubious: #f39c12;
+  --coach-blunder: #e74c3c;
+
+  /* 界面 */
+  --ui-bg: #f7f3ec;
+  --ui-panel: #ffffff;
+  --ui-card: #fffdf8;
+  --ui-border: #d8cbb4;
+  --ui-text: #1f2430;
+  --ui-text-2: #5a6472;
+  --ui-text-3: #8b93a1;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+
+  --shadow-sm: 0 1px 2px rgba(31, 36, 48, 0.08);
+  --shadow-md: 0 4px 12px rgba(31, 36, 48, 0.12);
+  --shadow-lg: 0 10px 28px rgba(31, 36, 48, 0.16);
+
+  --dur-fast: 120ms;
+  --dur-base: 220ms;
+  --ease: cubic-bezier(0.2, 0, 0.2, 1);
+
+  --font-ui: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-zh: 'KaiTi', 'STKaiti', 'Noto Serif SC', serif;
+  --font-mono: 'Consolas', 'SF Mono', 'DejaVu Sans Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ------------------------------------------------------------ 布局 */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app__header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 18px 24px 12px;
+  border-bottom: 1px solid var(--ui-border);
+  background: var(--ui-panel);
+}
+
+.app__title {
+  margin: 0;
+  font-family: var(--font-zh);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.app__subtitle {
+  color: var(--ui-text-2);
+  font-size: 13px;
+}
+
+.app__spacer {
+  flex: 1;
+}
+
+.app__main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(320px, 620px) minmax(280px, 360px);
+  gap: 24px;
+  align-items: start;
+  justify-content: center;
+  padding: 24px;
+}
+
+@media (max-width: 900px) {
+  .app__main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ------------------------------------------------------------ 棋盘 */
+
+.board-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.board {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  aspect-ratio: 560 / 620;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  /* 阻止移动端双击缩放干扰连点 */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.board__surface {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.board__layer {
+  position: absolute;
+  inset: 0;
+}
+
+.board__point {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* --- 棋子 --- */
+
+.piece {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  /* 一个格子的宽度 = 60 / 560 */
+  width: 10.714%;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: default;
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.piece img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.piece--movable {
+  cursor: pointer;
+}
+
+.piece--movable:hover {
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+.piece--selected {
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+.piece--selected img {
+  filter: drop-shadow(0 0 5px var(--state-selected)) drop-shadow(0 0 2px var(--state-selected));
+}
+
+/* 被将军的将帅：红色光环 + 跳动（形状 + 动效双通道，不只靠颜色） */
+.piece--checked img {
+  filter: drop-shadow(0 0 6px var(--state-check)) drop-shadow(0 0 3px var(--state-check));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .piece--checked img {
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* --- 标记层 ---
+ * 无障碍约定（见 assets/tokens/colors.md 的 WCAG 实测结论：状态色在木色底上
+ * 对比度普遍不达标 4.5:1），因此每一种状态都必须「颜色 + 形状」双重编码：
+ *
+ *   合法落点(空)   → 实心圆点
+ *   合法落点(吃子) → 空心圆环
+ *   选中           → 粗琥珀环
+ *   上一着         → 蓝色方角标
+ */
+
+.marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* 合法落点 · 空位：实心圆点 */
+.marker--dot {
+  width: 3.8%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: var(--state-legal);
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.9);
+}
+
+/* 合法落点 · 吃子：空心圆环 */
+.marker--ring {
+  width: 11.6%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  border: 3px solid var(--state-capture);
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.75);
+}
+
+/* 选中：粗琥珀环 */
+.marker--selected {
+  width: 12.6%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  border: 3px solid var(--state-selected);
+  background: rgba(245, 166, 35, 0.18);
+}
+
+/* 上一着：方角标（形状区别于所有圆形标记）
+ *
+ * 这一层压在棋子之上，所以不能填充 —— 填色会把棋子的字盖住。
+ * 尺寸也略大于棋子，让方框整个露在棋子外圈。 */
+.board__layer--overlay {
+  pointer-events: none;
+}
+
+.marker--last {
+  width: 12.4%;
+  aspect-ratio: 1 / 1;
+  border: 2.5px solid var(--state-last);
+  border-radius: 3px;
+  background: none;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.7);
+}
+
+/* ------------------------------------------------------------ 侧栏 */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.card__title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ui-text-2);
+  letter-spacing: 0.5px;
+}
+
+/* 状态条 */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+}
+
+.status__dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ui-text-3);
+}
+
+.status__dot--red {
+  background: var(--piece-red);
+}
+.status__dot--black {
+  background: var(--piece-black);
+}
+.status__dot--check {
+  background: var(--state-check);
+}
+.status__dot--over {
+  background: var(--coach-dubious);
+}
+
+.status__text {
+  font-weight: 500;
+}
+
+.status__meta {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ui-text-3);
+  font-family: var(--font-mono);
+}
+
+/* 按钮 */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-card);
+  color: var(--ui-text);
+  border-radius: var(--radius-md);
+  padding: 7px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+
+.btn:hover:not(:disabled) {
+  background: #fff;
+  border-color: var(--board-line);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--coach-good);
+  outline-offset: 2px;
+}
+
+/* 记谱输入 */
+.notation-form {
+  display: flex;
+  gap: 8px;
+}
+
+.notation-form input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius-md);
+  padding: 7px 10px;
+  font-family: var(--font-zh);
+  font-size: 15px;
+  background: var(--ui-card);
+  color: var(--ui-text);
+}
+
+.notation-form input:focus {
+  outline: 2px solid var(--coach-good);
+  outline-offset: -1px;
+}
+
+/* 走棋提示 */
+.hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hint-chip {
+  appearance: none;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-card);
+  border-radius: var(--radius-md);
+  padding: 4px 10px;
+  font-family: var(--font-zh);
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--ui-text);
+}
+
+.hint-chip:hover {
+  border-color: var(--state-legal);
+  background: rgba(46, 204, 113, 0.08);
+}
+
+.hint-chip--capture {
+  border-color: var(--state-capture);
+  color: var(--state-capture);
+}
+
+.hint-chip--capture:hover {
+  background: rgba(231, 76, 60, 0.08);
+}
+
+.muted {
+  color: var(--ui-text-3);
+  font-size: 13px;
+}
+
+/* 着法记录 */
+.moves {
+  max-height: 220px;
+  overflow-y: auto;
+  font-family: var(--font-zh);
+  font-size: 15px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.moves__row {
+  display: grid;
+  grid-template-columns: 34px 1fr 1fr;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: 1px dashed rgba(216, 203, 180, 0.6);
+}
+
+.moves__row:last-child {
+  border-bottom: none;
+}
+
+.moves__no {
+  color: var(--ui-text-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.moves__red {
+  color: var(--piece-red);
+}
+
+.moves__black {
+  color: var(--piece-black);
+}
+
+.moves__last {
+  background: rgba(52, 152, 219, 0.1);
+  border-radius: var(--radius-sm);
+}
+
+/* 图例 */
+.legend {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ui-text-2);
+}
+
+.legend__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend__swatch {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+}
+
+.legend__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--state-legal);
+}
+
+.legend__ring {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2.5px solid var(--state-capture);
+}
+
+.legend__sel {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2.5px solid var(--state-selected);
+  background: rgba(245, 166, 35, 0.2);
+}
+
+.legend__last {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--state-last);
+  border-radius: 2px;
+}
+
+/* 提示 / 错误 */
+.notice {
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 13px;
+  border: 1px solid;
+}
+
+.notice--error {
+  background: rgba(231, 76, 60, 0.08);
+  border-color: var(--state-capture);
+  color: #8c2b22;
+}
+
+.notice--info {
+  background: rgba(46, 134, 222, 0.08);
+  border-color: var(--coach-good);
+  color: #1d5fa0;
+}
+
+.notice__pre {
+  margin: 6px 0 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.fen {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ui-text-3);
+  word-break: break-all;
+  margin: 0;
+}
+
+/* 全屏错误（引擎没起来时） */
+.boot {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+}
+
+.boot__box {
+  max-width: 620px;
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  box-shadow: var(--shadow-lg);
+}
+
+.boot__title {
+  margin: 0 0 6px;
+  font-family: var(--font-zh);
+  font-size: 22px;
+}
+
+.boot__hint {
+  color: var(--ui-text-2);
+  margin: 12px 0;
+}
+
+.boot__cmd {
+  display: block;
+  background: #2c2c2a;
+  color: #f5f5f0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  margin: 8px 0;
+  user-select: all;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ------------------------------------------------------------ 分段选择器 */
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--ui-card);
+}
+
+.segmented--wrap {
+  flex-wrap: wrap;
+}
+
+.segmented__item {
+  appearance: none;
+  border: none;
+  border-right: 1px solid var(--ui-border);
+  background: transparent;
+  color: var(--ui-text);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.segmented__item:last-child {
+  border-right: none;
+}
+
+.segmented__item:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.segmented__item--active {
+  background: var(--ui-text);
+  color: #fff;
+}
+
+.segmented__item--active:hover {
+  background: var(--ui-text);
+}
+
+.segmented__item:focus-visible {
+  outline: 2px solid var(--coach-good);
+  outline-offset: -2px;
+}
+
+/* 表单字段 */
+.field {
+  margin-top: 12px;
+}
+
+.field__label {
+  display: block;
+  font-size: 12px;
+  color: var(--ui-text-2);
+  margin-bottom: 6px;
+}
+
+/* 引擎信息行 */
+.engine-line {
+  margin: 10px 0 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ui-text-2);
+  line-height: 1.7;
+}
+
+/* 推荐着法条上的评分 */
+.hint-chip__score {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ui-text-3);
+}
+
+/* 引擎思考中的指示 */
+.app__thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--coach-good);
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(46, 134, 222, 0.25);
+  border-top-color: var(--coach-good);
+  border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .spinner {
+    animation: spin 0.8s linear infinite;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 非玩家回合时棋盘不接受点击 */
+.board--locked .piece--movable {
+  cursor: default;
+}
+
+.board--locked .piece--movable:hover {
+  transform: translate(-50%, -50%);
+}
+
+/* ------------------------------------------------------------ 战法讲解卡片 */
+
+.note {
+  border-left: 3px solid var(--ui-border);
+  padding-left: 12px;
+}
+
+/* 左侧色条用原始令牌色（不是文字，对比度要求不同） */
+.note.lv-best {
+  border-left-color: var(--coach-best);
+}
+.note.lv-good {
+  border-left-color: var(--coach-good);
+}
+.note.lv-dubious {
+  border-left-color: var(--coach-dubious);
+}
+.note.lv-blunder {
+  border-left-color: var(--coach-blunder);
+}
+.note.lv-missed {
+  border-left-color: #8e44ad;
+}
+
+.note__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.note__move {
+  font-family: var(--font-zh);
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.note__loss {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ui-text-3);
+}
+
+/*
+ * 等级徽标。
+ *
+ * ⚠️ 底色**不是** tokens 里的 coach.* 原色，而是它们的加深版本。
+ * 原因：assets/tokens/colors.md 的 WCAG 实算结论表明 coach.best 只有 2.87:1、
+ * coach.dubious 只有 2.19:1，白字压在上面远达不到 4.5:1。docs/05 §4.3 的强制约束
+ * 要求「徽标内文字 ≥ 4.5:1，依背景亮度选择颜色」—— 因此这里用加深底色保证可读性，
+ * 同时保留原色作为左侧色条与边框。
+ *
+ * 另外每一种等级都有**不同的图标形状**（★ ✓ ? ✕ ‼），
+ * 不允许仅靠颜色传达等级 —— 这是给色觉障碍用户的保障。
+ */
+.lv-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  background: #5f5e5a;
+}
+
+.lv-badge__glyph {
+  font-size: 13px;
+}
+
+.lv-badge.lv-best {
+  background: #1e8449;
+}
+.lv-badge.lv-good {
+  background: #1b5e9e;
+}
+.lv-badge.lv-dubious {
+  background: #8a5a00;
+}
+.lv-badge.lv-blunder {
+  background: #a93226;
+}
+.lv-badge.lv-missed {
+  background: #6c3483;
+}
+
+.note__headline {
+  margin: 8px 0 0;
+  font-family: var(--font-zh);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.note__detail {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--ui-text-2);
+}
+
+.note__suggestion {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--coach-good);
+}
+
+.note__meta {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--ui-text-3);
+  line-height: 1.6;
+}
+
+/* 战术标签 */
+.tactic-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  font-size: 12px;
+  border: 0.5px solid var(--ui-border);
+  background: var(--ui-card);
+  color: var(--ui-text-2);
+}
+
+.tactic-chip--structure {
+  border-color: var(--coach-best);
+  color: #1e8449;
+}
+
+.tactic-chip--relation {
+  border-color: var(--coach-good);
+  color: #1b5e9e;
+}
+
+.tactic-chip--opening {
+  border-color: #8e44ad;
+  color: #6c3483;
+}
+
+/* 棋形层：素材仍是「初始定义，待校准」，低置信度时以弱样式展示 */
+.tactic-chip--formation {
+  border-color: var(--ui-border);
+  color: var(--ui-text-3);
+  background: transparent;
+}
+
+.tactic-chip--weak {
+  border-style: dashed;
+  opacity: 0.75;
+}

@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<!--
+  弈道 · 交互原型（Design Prototype）
+  由 scripts/build_prototype.py 生成：占位符被真实素材替换。
+  棋盘 / 棋子几何与配色直接内联自 assets/，确保原型与实现基线完全一致。
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>弈道 · 交互原型</title>
+<style>
+:root{
+  /* 棋盘（assets/tokens/design-tokens.json · board） */
+  --wood:#F3D9A4; --line:#8B5A2B; --line-strong:#6B4423;
+  /* 棋子 */
+  --p-red:#B3282D; --p-black:#1F2430;
+  /* 状态色 */
+  --st-selected:#F5A623; --st-legal:#2ECC71; --st-capture:#E74C3C;
+  --st-last:#3498DB; --st-check:#D0021B; --st-hint:#8E44AD;
+  /* 讲解等级色阶 */
+  --c-best:#27AE60; --c-good:#2E86DE; --c-dubious:#F39C12;
+  --c-blunder:#E74C3C; --c-missed:#8E44AD;
+  /* UI */
+  --ui-bg:#F7F3EC; --ui-panel:#FFFFFF; --ui-card:#FFFDF8; --ui-border:#D8CBB4;
+  --tx1:#1F2430; --tx2:#5A6472;
+  --r-sm:4px; --r-md:8px; --r-lg:16px;
+  --sh-sm:0 1px 2px rgba(31,36,48,.08);
+  --sh-md:0 4px 12px rgba(31,36,48,.12);
+  --sh-lg:0 10px 28px rgba(31,36,48,.16);
+  --d-fast:120ms; --d-base:220ms; --d-slow:360ms;
+  --ez:cubic-bezier(.2,0,.2,1);
+  --font-zh:"KaiTi","STKaiti","Noto Serif SC",serif;
+  --font-ui:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--font-ui); background:var(--ui-bg); color:var(--tx1);
+  font-size:14px; line-height:1.6; -webkit-font-smoothing:antialiased;
+}
+.prototype-notice{
+  background:#FFF6E0; border-bottom:1px solid #E8D9A8; color:#6B5A2E;
+  font-size:12px; padding:7px 20px; text-align:center;
+}
+.prototype-notice b{color:#8A6D1F}
+
+/* ---------- 导航 ---------- */
+.topbar{
+  display:flex; align-items:center; gap:20px; padding:0 20px; height:54px;
+  background:var(--ui-panel); border-bottom:1px solid var(--ui-border);
+  position:sticky; top:0; z-index:50;
+}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--font-zh);
+  font-size:20px;font-weight:700;letter-spacing:2px}
+.brand .mark{
+  width:28px;height:28px;border-radius:50%;background:#FFF8F0;border:2px solid var(--p-red);
+  display:grid;place-items:center;color:var(--p-red);font-size:15px;font-weight:700;
+  font-family:var(--font-zh);line-height:1;
+}
+.nav-tabs{display:flex;gap:4px;margin-left:12px}
+.nav-tabs button{
+  border:1px solid transparent;background:transparent;color:var(--tx2);
+  padding:6px 14px;border-radius:var(--r-md);cursor:pointer;font-size:13px;
+  font-family:var(--font-ui);transition:all var(--d-fast) var(--ez);
+}
+.nav-tabs button:hover{background:#F2EDE3;color:var(--tx1)}
+.nav-tabs button.on{background:#F0E4CC;border-color:#DCC79B;color:#7A5A17;font-weight:600}
+.topbar .spacer{flex:1}
+.conn{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2)}
+.conn .dot{width:7px;height:7px;border-radius:50%;background:#2ECC71}
+.conn .dot.off{background:#B9B3A8}
+
+/* ---------- 页面容器 ---------- */
+.page{display:none;padding:24px 20px 48px}
+.page.on{display:block}
+.wrap{max-width:1180px;margin:0 auto}
+.page-head{margin-bottom:20px}
+.page-head h2{font-family:var(--font-zh);font-size:24px;letter-spacing:1px;font-weight:700}
+.page-head p{color:var(--tx2);font-size:13px;margin-top:4px}
+
+/* ---------- 通用卡片 ---------- */
+.card{
+  background:var(--ui-card); border:1px solid var(--ui-border); border-radius:var(--r-lg);
+  box-shadow:var(--sh-sm);
+}
+.panel{background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:var(--r-lg)}
+
+/* ---------- 页面1：主菜单 ---------- */
+.hero{
+  text-align:center;padding:52px 20px 40px;
+}
+.hero .logo{
+  width:76px;height:76px;border-radius:50%;margin:0 auto 18px;
+  background:#FFF8F0;border:3px solid var(--p-red);display:grid;place-items:center;
+  font-family:var(--font-zh);font-size:40px;color:var(--p-red);font-weight:700;
+  box-shadow:var(--sh-md);line-height:1;
+}
+.hero h1{font-family:var(--font-zh);font-size:40px;letter-spacing:8px;font-weight:700}
+.hero .sub{color:var(--tx2);margin-top:10px;letter-spacing:2px;font-size:14px}
+.hero .tagline{
+  display:inline-block;margin-top:16px;padding:5px 14px;border-radius:999px;
+  background:#F0E4CC;color:#7A5A17;font-size:12px;letter-spacing:1px;
+}
+.menu-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:16px;margin-top:36px;
+}
+.menu-card{
+  background:var(--ui-card);border:1px solid var(--ui-border);border-radius:var(--r-lg);
+  padding:22px 20px;cursor:pointer;text-align:left;box-shadow:var(--sh-sm);
+  transition:transform var(--d-base) var(--ez),box-shadow var(--d-base) var(--ez);
+  font-family:var(--font-ui);
+}
+.menu-card:hover{transform:translateY(-3px);box-shadow:var(--sh-md);border-color:#C9B48A}
+.menu-card .ico{
+  width:42px;height:42px;border-radius:var(--r-md);display:grid;place-items:center;
+  font-size:20px;margin-bottom:14px;background:#F4EFE4;
+}
+.menu-card h3{font-size:16px;margin-bottom:6px;font-family:var(--font-zh);letter-spacing:1px}
+.menu-card p{font-size:12px;color:var(--tx2);line-height:1.55}
+.menu-card .badge{
+  display:inline-block;margin-top:10px;font-size:11px;padding:2px 8px;
+  border-radius:999px;background:#E8F6EE;color:#1E7B4D;
+}
+.menu-card .badge.soon{background:#F2EDE3;color:#8A8577}
+.menu-card.primary{border-color:#C9B48A;background:#FFFDF5}
+
+/* ---------- 页面2：人机配置 ---------- */
+.setup-row{display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start}
+.fieldset{margin-bottom:22px}
+.fieldset > label{
+  display:block;font-size:13px;font-weight:600;margin-bottom:10px;color:var(--tx1);
+}
+.fieldset > label .hint{font-weight:400;color:var(--tx2);font-size:12px;margin-left:8px}
+.opt-row{display:flex;gap:10px;flex-wrap:wrap}
+.opt{
+  border:1px solid var(--ui-border);background:var(--ui-card);border-radius:var(--r-md);
+  padding:10px 16px;cursor:pointer;font-size:13px;font-family:var(--font-ui);
+  transition:all var(--d-fast) var(--ez);color:var(--tx1);text-align:left;
+}
+.opt:hover{border-color:#C9B48A;background:#FFFDF5}
+.opt.on{border-color:#C9A24D;background:#FFF6E0;color:#7A5A17;font-weight:600;
+  box-shadow:inset 0 0 0 1px #E8D9A8}
+.opt small{display:block;font-size:11px;color:var(--tx2);font-weight:400;margin-top:2px}
+.opt.on small{color:#8A6D1F}
+.btn{
+  border:1px solid var(--ui-border);background:var(--ui-panel);color:var(--tx1);
+  padding:10px 22px;border-radius:var(--r-md);cursor:pointer;font-size:14px;
+  font-family:var(--font-ui);transition:all var(--d-fast) var(--ez);
+}
+.btn:hover{background:#F5F1E8;border-color:#C9B48A}
+.btn.primary{
+  background:var(--p-red);color:#fff;border-color:var(--p-red);font-weight:600;
+  box-shadow:var(--sh-sm);
+}
+.btn.primary:hover{background:#9C2226;border-color:#9C2226}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--tx2)}
+.btn.ghost:hover{background:#F2EDE3;color:var(--tx1)}
+.btn.sm{padding:6px 13px;font-size:12.5px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.difficulty-preview{
+  background:var(--ui-card);border:1px solid var(--ui-border);border-radius:var(--r-lg);
+  padding:20px;
+}
+.difficulty-preview h4{font-family:var(--font-zh);font-size:17px;margin-bottom:4px;letter-spacing:1px}
+.difficulty-preview .lvl{color:var(--tx2);font-size:12.5px;margin-bottom:16px}
+.kv{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed #E7DFCF;font-size:12.5px}
+.kv:last-child{border-bottom:none}
+.kv span:first-child{color:var(--tx2)}
+.kv span:last-child{font-weight:600;font-variant-numeric:tabular-nums}
+.bar{height:6px;border-radius:3px;background:#EFE9DC;overflow:hidden;margin-top:3px}
+.bar > i{display:block;height:100%;border-radius:3px;background:#C9A24D}
+
+/* ---------- 页面3：对局（核心） ---------- */
+.game-layout{display:grid;grid-template-columns:minmax(480px,600px) 1fr;gap:20px;align-items:start}
+@media(max-width:1080px){.game-layout{grid-template-columns:1fr}.setup-row{grid-template-columns:1fr}}
+
+.board-col{display:flex;flex-direction:column;gap:12px}
+.player-bar{
+  display:flex;align-items:center;gap:12px;padding:10px 14px;
+  background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:var(--r-md);
+}
+.player-bar.active{border-color:#C9A24D;box-shadow:0 0 0 2px #F5EFDF}
+.avatar{
+  width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  font-family:var(--font-zh);font-size:17px;font-weight:700;flex:0 0 auto;
+  background:#FFF8F0;border:2px solid var(--p-red);color:var(--p-red);
+}
+.avatar.black{background:#F5F6F8;border-color:var(--p-black);color:var(--p-black)}
+.player-bar .who{flex:1;min-width:0}
+.player-bar .who .name{font-size:13.5px;font-weight:600}
+.player-bar .who .meta{font-size:11.5px;color:var(--tx2)}
+.clock{
+  font-variant-numeric:tabular-nums;font-size:21px;font-weight:700;
+  letter-spacing:1px;font-family:"Consolas","SF Mono",monospace;
+}
+.clock.low{color:var(--c-blunder)}
+.clock.paused{color:var(--tx2)}
+.captured{display:flex;gap:2px;font-family:var(--font-zh);font-size:13px;color:var(--tx2)}
+
+.board-shell{
+  position:relative;background:var(--wood);border-radius:10px;
+  box-shadow:var(--sh-lg);overflow:hidden;
+}
+.board-shell svg.board{display:block;width:100%;height:auto}
+
+/* 棋盘上的元素 */
+.hl-legal{fill:var(--st-legal);opacity:.5}
+.hl-capture{fill:none;stroke:var(--st-capture);stroke-width:3;opacity:.85}
+.hl-sel-ring{fill:none;stroke:var(--st-selected);stroke-width:3.5;opacity:.95}
+.hl-sel-glow{fill:var(--st-selected);opacity:.18}
+.hl-last-from{fill:none;stroke:var(--st-last);stroke-width:2.5;stroke-dasharray:5 4;opacity:.9}
+.hl-last-to{fill:none;stroke:var(--st-last);stroke-width:2.5;opacity:.95}
+.hl-hint{fill:none;stroke:var(--st-hint);stroke-width:3;stroke-dasharray:9 7;
+  stroke-linecap:round;opacity:.9}
+.hl-hint-head{fill:var(--st-hint);opacity:.9}
+.board-legend{
+  display:flex;gap:14px;flex-wrap:wrap;padding:10px 14px;font-size:11.5px;color:var(--tx2);
+  background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:var(--r-md);
+}
+.board-legend span{display:flex;align-items:center;gap:5px}
+.lg{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+.lg.ring{background:transparent;border:2px solid currentColor}
+.lg.sq{width:11px;height:11px;border-radius:2px}
+
+.game-actions{display:flex;gap:8px;flex-wrap:wrap}
+.eval-bar{
+  height:8px;border-radius:4px;overflow:hidden;display:flex;
+  border:1px solid var(--ui-border);background:#1F2430;
+}
+.eval-bar .r{background:#C0392B;transition:width var(--d-slow) var(--ez)}
+.eval-bar .b{background:#2C3E50;flex:1}
+.eval-label{display:flex;justify-content:space-between;font-size:11px;color:var(--tx2);margin-top:5px}
+
+/* 讲解面板 */
+.coach-panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.coach-head{
+  display:flex;align-items:center;gap:10px;padding:12px 14px;
+  background:var(--ui-panel);border:1px solid var(--ui-border);
+  border-radius:var(--r-md) var(--r-md) 0 0;border-bottom:none;
+}
+.coach-head h3{font-family:var(--font-zh);font-size:16px;letter-spacing:1px;flex:1}
+.coach-head .seg{display:flex;border:1px solid var(--ui-border);border-radius:var(--r-sm);overflow:hidden}
+.coach-head .seg button{
+  border:none;background:var(--ui-panel);color:var(--tx2);padding:3px 9px;
+  font-size:11.5px;cursor:pointer;font-family:var(--font-ui);
+}
+.coach-head .seg button.on{background:#F0E4CC;color:#7A5A17;font-weight:600}
+.coach-list{
+  display:flex;flex-direction:column;gap:10px;padding:14px;
+  background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:0 0 var(--r-md) var(--r-md);
+  max-height:640px;overflow-y:auto;
+}
+.note{
+  border:1px solid var(--ui-border);border-radius:var(--r-md);background:var(--ui-card);
+  padding:12px 13px 12px 15px;position:relative;overflow:hidden;
+  border-left-width:4px;
+}
+.note.lv-best{border-left-color:var(--c-best)}
+.note.lv-good{border-left-color:var(--c-good)}
+.note.lv-dubious{border-left-color:var(--c-dubious)}
+.note.lv-blunder{border-left-color:var(--c-blunder)}
+.note.lv-missed{border-left-color:var(--c-missed)}
+.note .row1{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.note .ply{font-size:11px;color:#9A9488;font-variant-numeric:tabular-nums}
+.note .mv{font-family:var(--font-zh);font-size:16px;font-weight:700;letter-spacing:1px}
+.note .row2{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.tag{
+  font-size:11px;padding:2px 8px;border-radius:999px;background:#F1ECE0;color:#6B6146;
+  border:1px solid #E4D9C2;
+}
+.tag.strong{background:#EAF3FB;color:#1F5E8C;border-color:#CFE2F2}
+.tag.weak{opacity:.75}
+.note .headline{font-size:13.5px;font-weight:600;margin-bottom:5px;line-height:1.55}
+.note .detail{font-size:12.5px;color:var(--tx2);line-height:1.7}
+.note .suggest{
+  margin-top:9px;padding:8px 10px;background:#F4F8FC;border:1px solid #DCE8F2;
+  border-radius:var(--r-sm);font-size:12.5px;color:#1F5E8C;
+}
+.note .suggest b{font-family:var(--font-zh);font-size:14px;letter-spacing:1px}
+.note .enh{
+  margin-top:9px;font-size:11.5px;color:#9A9488;display:flex;align-items:center;gap:6px;
+}
+.note .enh .typing{display:inline-flex;gap:2px}
+.note .enh .typing i{
+  width:3px;height:3px;border-radius:50%;background:#B9B3A8;display:block;
+  animation:blink 1.2s infinite;
+}
+.note .enh .typing i:nth-child(2){animation-delay:.2s}
+.note .enh .typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
+.note.dim{opacity:.62}
+
+/* 等级徽标：色 + 图标形状 + 文字（三重编码，不依赖颜色）
+   注意：必须用 .lv-badge.lv-* 提升特异性，否则会误命中 .note.lv-* 把整张卡片刷成色块 */
+.lv-badge{
+  display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;
+  font-size:11.5px;font-weight:700;color:#fff;line-height:1.5;
+}
+.lv-badge .ic{font-size:11px;line-height:1}
+.lv-badge.lv-best{background:var(--c-best)}
+.lv-badge.lv-good{background:var(--c-good)}
+.lv-badge.lv-dubious{background:var(--c-dubious);color:#3D2B00}
+.lv-badge.lv-blunder{background:var(--c-blunder)}
+.lv-badge.lv-missed{background:var(--c-missed)}
+
+/* ---------- 页面4：房间 ---------- */
+.room-layout{display:grid;grid-template-columns:1.15fr 1fr;gap:20px;align-items:start}
+@media(max-width:900px){.room-layout{grid-template-columns:1fr}}
+.room-code{
+  font-family:"Consolas","SF Mono",monospace;font-size:44px;font-weight:700;
+  letter-spacing:10px;color:#7A5A17;
+}
+.room-code-box{
+  background:#FFF6E0;border:1px dashed #D9C48C;border-radius:var(--r-md);
+  padding:18px 20px;text-align:center;margin:14px 0;
+}
+.seat{
+  display:flex;align-items:center;gap:12px;padding:14px;border-radius:var(--r-md);
+  border:1px solid var(--ui-border);background:var(--ui-card);
+}
+.seat.empty{border-style:dashed;background:#FBF8F1}
+.seat .st{margin-left:auto;font-size:12px;font-weight:600;color:#1E7B4D}
+.seat .st.wait{color:var(--tx2);font-weight:400}
+.spinner{
+  width:18px;height:18px;border:2.5px solid #E4D9C2;border-top-color:#C9A24D;
+  border-radius:50%;animation:spin .9s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.watching{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.watching .w{
+  display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--tx2);
+  background:#F4EFE4;padding:3px 9px;border-radius:999px;
+}
+
+/* ---------- 页面5：复盘 ---------- */
+.review-layout{display:grid;grid-template-columns:minmax(420px,540px) 1fr;gap:20px;align-items:start}
+@media(max-width:1080px){.review-layout{grid-template-columns:1fr}}
+.movelist{
+  display:grid;grid-template-columns:auto 1fr 1fr;gap:2px 8px;font-size:12.5px;
+  max-height:260px;overflow-y:auto;padding:10px 12px;
+}
+.movelist .no{color:#9A9488;font-variant-numeric:tabular-nums;padding:2px 0}
+.movelist .m{
+  font-family:var(--font-zh);font-size:14px;padding:2px 8px;border-radius:var(--r-sm);
+  display:flex;align-items:center;gap:6px;cursor:pointer;
+}
+.movelist .m:hover{background:#F2EDE3}
+.movelist .m.on{background:#FFF6E0;font-weight:700}
+.movelist .m .d{width:6px;height:6px;border-radius:50%;flex:0 0 auto}
+.d-best{background:var(--c-best)} .d-good{background:var(--c-good)}
+.d-dubious{background:var(--c-dubious)} .d-blunder{background:var(--c-blunder)}
+.d-missed{background:var(--c-missed)}
+
+.stat-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:12.5px}
+.stat-row .lb{width:74px;color:var(--tx2);flex:0 0 auto}
+.stat-row .track{flex:1;height:16px;background:#F2EDE3;border-radius:4px;overflow:hidden;display:flex}
+.stat-row .track i{display:block;height:100%}
+.stat-row .n{width:52px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+
+.tl-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px dashed #E7DFCF;font-size:12.5px}
+.tl-item:last-child{border-bottom:none}
+.tl-item .t{font-family:"Consolas",monospace;color:var(--tx2);flex:0 0 auto}
+
+/* 通用小工具 */
+.hstack{display:flex;align-items:center;gap:10px}
+.vstack{display:flex;flex-direction:column;gap:10px}
+.muted{color:var(--tx2)}
+.tiny{font-size:11.5px}
+.sec-title{
+  font-family:var(--font-zh);font-size:16px;letter-spacing:1px;font-weight:700;
+  margin-bottom:12px;display:flex;align-items:center;gap:8px;
+}
+.sec-title:before{content:"";width:3px;height:15px;background:#C9A24D;border-radius:2px}
+.pad{padding:18px}
+</style>
+</head>
+<body>
+
+<div class="prototype-notice">
+  <b>交互原型</b> · 棋盘与棋子为 <code>assets/</code> 真实素材内联，几何与配色与实现基线一致 · 页面中展示的局面、对局记录与讲解文案为<b>演示数据</b>
+</div>
+
+<div class="topbar">
+  <div class="brand"><span class="mark">帅</span>弈道</div>
+  <div class="nav-tabs">
+    <button class="on" data-page="menu">主菜单</button>
+    <button data-page="setup">人机配置</button>
+    <button data-page="game">对局中</button>
+    <button data-page="room">联网房间</button>
+    <button data-page="review">复盘分析</button>
+  </div>
+  <div class="spacer"></div>
+  <div class="conn"><span class="dot" id="connDot"></span><span id="connText">已连接 · 延迟 32ms</span></div>
+</div>
+
+<!-- 棋盘与棋子的 SVG 定义（跨页面共用的 sprite） -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="piece-shadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#000000" flood-opacity="0.18"/>
+    </filter>
+    <marker id="arrow-head" viewBox="0 0 10 10" refX="8" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" class="hl-hint-head"/>
+    </marker>
+    <!--@PIECE_SPRITES@-->
+  </defs>
+</svg>
+
+<!-- ============ 页面 1：主菜单 ============ -->
+<section class="page on" id="page-menu">
+  <div class="wrap">
+    <div class="hero">
+      <div class="logo">帅</div>
+      <h1>弈道</h1>
+      <div class="sub">会讲课的中国象棋</div>
+      <div class="tagline">每走一步，都告诉你为什么</div>
+    </div>
+    <div class="menu-grid">
+      <button class="menu-card primary" data-go="setup">
+        <div class="ico">🤖</div>
+        <h3>人机对战</h3>
+        <p>五档难度从入门到大师，离线可玩，每步都有战法讲解。</p>
+        <span class="badge">离线可用</span>
+      </button>
+      <button class="menu-card" data-go="room">
+        <div class="ico">⚔️</div>
+        <h3>联网对战</h3>
+        <p>创建房间邀请好友，或快速匹配同级对手，支持观战与断线重连。</p>
+        <span class="badge">天梯匹配</span>
+      </button>
+      <button class="menu-card" data-go="review">
+        <div class="ico">📖</div>
+        <h3>复盘分析</h3>
+        <p>逐着回放对局，标注优/良/疑/劣/漏五档评价与失误统计。</p>
+        <span class="badge">学习利器</span>
+      </button>
+      <button class="menu-card" data-go="game">
+        <div class="ico">🎯</div>
+        <h3>观战学习</h3>
+        <p>旁观进行中的对局，同步阅读战法讲解，看高手怎么想。</p>
+        <span class="badge">延迟 3 秒</span>
+      </button>
+      <button class="menu-card">
+        <div class="ico">🏆</div>
+        <h3>排行榜</h3>
+        <p>总榜与周榜，等级分实时更新。</p>
+        <span class="badge soon">敬请期待</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 页面 2：人机配置 ============ -->
+<section class="page" id="page-setup">
+  <div class="wrap">
+    <div class="page-head">
+      <h2>人机对战</h2>
+      <p>选择难度与执子，无需登录即可开始</p>
+    </div>
+    <div class="setup-row">
+      <div class="panel pad">
+        <div class="fieldset">
+          <label>难度 <span class="hint">低难度不会乱走棋，只是会做出次优选择</span></label>
+          <div class="opt-row" id="lvlRow">
+            <button class="opt" data-l="1">入门<small>刚学会走法</small></button>
+            <button class="opt" data-l="2">初级<small>会基本吃子防守</small></button>
+            <button class="opt on" data-l="3">中级<small>有基本战术意识</small></button>
+            <button class="opt" data-l="4">高级<small>会组合战术</small></button>
+            <button class="opt" data-l="5">大师<small>接近业余强手</small></button>
+          </div>
+        </div>
+        <div class="fieldset">
+          <label>执子</label>
+          <div class="opt-row">
+            <button class="opt on">执红先行</button>
+            <button class="opt">执黑后行</button>
+            <button class="opt">随机</button>
+          </div>
+        </div>
+        <div class="fieldset">
+          <label>时限</label>
+          <div class="opt-row">
+            <button class="opt">不限时</button>
+            <button class="opt on">10 分钟 + 30 秒/步</button>
+            <button class="opt">5 分钟 + 10 秒/步</button>
+          </div>
+        </div>
+        <div class="fieldset">
+          <label>讲解</label>
+          <div class="opt-row">
+            <button class="opt on">标准</button>
+            <button class="opt">简洁</button>
+            <button class="opt">详细</button>
+          </div>
+        </div>
+        <div class="hstack" style="margin-top:24px">
+          <button class="btn primary" data-go="game">开始对局</button>
+          <button class="btn ghost" data-go="menu">返回</button>
+        </div>
+      </div>
+
+      <div class="difficulty-preview">
+        <h4 id="pvName">中级</h4>
+        <div class="lvl" id="pvDesc">有基本战术意识，会计算几步</div>
+        <div class="kv"><span>搜索深度</span><span id="pvDepth">6 层</span></div>
+        <div class="kv"><span>预计思考时间</span><span id="pvTime">1 秒内</span></div>
+        <div class="kv"><span>失误概率</span><span id="pvMiss">5%</span></div>
+        <div class="kv"><span>开局库</span><span id="pvBook">浅层</span></div>
+        <div style="margin-top:14px">
+          <div class="tiny muted" style="margin-bottom:6px">相对棋力</div>
+          <div class="bar"><i id="pvBar" style="width:60%"></i></div>
+        </div>
+        <div class="tiny muted" style="margin-top:14px;line-height:1.6">
+          难度通过「搜索深度 + 评估精度 + 候选着法随机化」三者共同调节。低难度档会在评分接近的着法中做选择，
+          因此棋风仍像人类，不会出现莫名其妙的送子。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 页面 3：对局（核心） ============ -->
+<section class="page" id="page-game">
+  <div class="wrap">
+    <div class="page-head" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+      <div style="flex:1">
+        <h2>对局中</h2>
+        <p>人机对战 · 中级 · 第 11 着 · 轮红方走子</p>
+      </div>
+      <div class="game-actions">
+        <button class="btn sm">悔棋</button>
+        <button class="btn sm">求和</button>
+        <button class="btn sm">认输</button>
+        <button class="btn sm primary">提示（剩 3）</button>
+      </div>
+    </div>
+
+    <div class="game-layout">
+      <!-- 左：棋盘 -->
+      <div class="board-col">
+        <div class="player-bar">
+          <div class="avatar black">将</div>
+          <div class="who">
+            <div class="name">弈道 · 中级</div>
+            <div class="meta">黑方 · 等级分 1520</div>
+          </div>
+          <div class="captured">兵</div>
+          <div class="clock">08:42</div>
+        </div>
+
+        <div class="board-shell">
+          <svg class="board" viewBox="0 0 560 620" xmlns="http://www.w3.org/2000/svg">
+            <!--@BOARD_SVG@-->
+
+            <g id="layer-highlight">
+              <!-- 坐标说明：屏幕 y = 40 + (9 - 棋理行号) × 60，红方底线(row 0)在最下方 -->
+              <!-- 上一着：黑方 车1平2 (a9 → b9) -->
+              <rect class="hl-last-from" x="28" y="28" width="24" height="24" rx="3"/>
+              <rect class="hl-last-to"   x="88" y="28" width="24" height="24" rx="3"/>
+
+              <!-- 吃子目标（红色圆环，画在棋子下方，只露外圈） -->
+              <circle class="hl-capture" cx="460" cy="160" r="29"/><!-- h7 黑炮 -->
+              <circle class="hl-capture" cx="280" cy="220" r="29"/><!-- e6 黑卒 -->
+              <circle class="hl-capture" cx="520" cy="220" r="29"/><!-- i6 黑卒 -->
+
+              <!-- 合法落点（空位圆点）：h5 h4 h3 h2 h1 h0 / g6 f6 -->
+              <circle class="hl-legal" cx="460" cy="280" r="9"/>
+              <circle class="hl-legal" cx="460" cy="340" r="9"/>
+              <circle class="hl-legal" cx="460" cy="400" r="9"/>
+              <circle class="hl-legal" cx="460" cy="460" r="9"/>
+              <circle class="hl-legal" cx="460" cy="520" r="9"/>
+              <circle class="hl-legal" cx="460" cy="580" r="9"/>
+              <circle class="hl-legal" cx="400" cy="220" r="9"/>
+              <circle class="hl-legal" cx="340" cy="220" r="9"/>
+
+              <!-- 选中棋子（h6 红车） -->
+              <circle class="hl-sel-glow" cx="460" cy="220" r="32"/>
+              <circle class="hl-sel-ring" cx="460" cy="220" r="30"/>
+
+              <!-- 推荐着法箭头：车二平五（h6 → e6，吃中卒） -->
+              <line class="hl-hint" x1="438" y1="220" x2="308" y2="220"
+                    marker-end="url(#arrow-head)"/>
+            </g>
+
+            <g id="layer-pieces">
+              <!--@PIECES@-->
+            </g>
+          </svg>
+        </div>
+
+        <div class="board-legend">
+          <span><i class="lg" style="background:var(--st-selected)"></i>选中棋子</span>
+          <span><i class="lg" style="background:var(--st-legal);opacity:.5"></i>可走位置</span>
+          <span><i class="lg ring" style="color:var(--st-capture)"></i>可吃子</span>
+          <span><i class="lg sq" style="background:var(--st-last)"></i>上一着</span>
+          <span><i class="lg" style="background:var(--st-hint)"></i>推荐着法</span>
+        </div>
+
+        <div class="player-bar active">
+          <div class="avatar">帅</div>
+          <div class="who">
+            <div class="name">你（游客）</div>
+            <div class="meta">红方 · 轮到你走</div>
+          </div>
+          <div class="captured">卒 卒</div>
+          <div class="clock">09:58</div>
+        </div>
+
+        <div class="panel pad" style="padding:14px 16px">
+          <div class="eval-label">
+            <span>红方优势</span><span class="muted tiny">评估 +0.85</span><span>黑方优势</span>
+          </div>
+          <div class="eval-bar"><div class="r" style="width:58.5%"></div><div class="b"></div></div>
+          <div class="tiny muted" style="margin-top:8px">
+            引擎评估基于搜索评分换算，用于提示局面倾向，不代表胜负已定。
+          </div>
+        </div>
+      </div>
+
+      <!-- 右：战法讲解 -->
+      <div class="coach-panel">
+        <div class="coach-head">
+          <h3>战法讲解</h3>
+          <div class="seg">
+            <button class="on">标准</button>
+            <button>详细</button>
+          </div>
+        </div>
+        <div class="coach-list">
+
+          <div class="note lv-best">
+            <div class="row1">
+              <span class="lv-badge lv-best"><span class="ic">★</span>最佳着法</span>
+              <span class="mv">炮二平五</span>
+              <span class="ply">第 1 着 · 红</span>
+            </div>
+            <div class="row2">
+              <span class="tag strong">中炮</span>
+              <span class="tag">开局定式</span>
+            </div>
+            <div class="headline">布局进入「中炮对屏风马」。</div>
+            <div class="detail">
+              炮从二路平到中路，直接对准黑方将门。中炮是最主流的开局体系，
+              配合双马快速出动争夺中路主动权，同时为左车让出通道。
+            </div>
+            <div class="enh"><span>已由 AI 教练增强</span></div>
+          </div>
+
+          <div class="note lv-good">
+            <div class="row1">
+              <span class="lv-badge lv-good"><span class="ic">✓</span>不错</span>
+              <span class="mv">车9平8</span>
+              <span class="ply">第 4 着 · 黑</span>
+            </div>
+            <div class="row2"><span class="tag strong">出车</span></div>
+            <div class="headline">及时出车，跟上红方节奏。</div>
+            <div class="detail">
+              黑车平到八路，与右马形成联系，避免了子力脱节。
+              与引擎首选着法一致，是布局阶段的常规应法。
+            </div>
+          </div>
+
+          <div class="note lv-dubious">
+            <div class="row1">
+              <span class="lv-badge lv-dubious"><span class="ic">?</span>稍有问题</span>
+              <span class="mv">卒7进1</span>
+              <span class="ply">第 6 着 · 黑</span>
+            </div>
+            <div class="row2"><span class="tag">挺卒</span></div>
+            <div class="headline">挺卒活马方向没错，但节奏稍缓。</div>
+            <div class="detail">
+              这步棋本身有价值——挺起七卒为马开道。问题出在时机：
+              红方中炮已经布好，此时更紧要的是完成左翼子力联系。
+              缓一步之后，红方车二进六可以长驱直入压到河界。
+            </div>
+            <div class="suggest">建议改走 <b>马2进3</b> — 先活动左马，兼顾中路防守</div>
+            <div class="enh">
+              <span class="typing"><i></i><i></i><i></i></span>
+              <span>AI 教练正在生成详细点评…</span>
+            </div>
+          </div>
+
+          <div class="note lv-good">
+            <div class="row1">
+              <span class="lv-badge lv-good"><span class="ic">✓</span>不错</span>
+              <span class="mv">车二进六</span>
+              <span class="ply">第 7 着 · 红</span>
+            </div>
+            <div class="row2"><span class="tag strong">过河车</span><span class="tag">压制</span></div>
+            <div class="headline">车过河压马，取得空间优势。</div>
+            <div class="detail">
+              红车推进到河界，直接限制黑方右马的出路，同时为后续中路攻势做准备。
+              比引擎首选着法差 35 厘兵（0.35 个兵），是可接受的实战选择。
+            </div>
+          </div>
+
+          <div class="note" style="border-left-color:#C9B48A;background:#FBF8F1">
+            <div class="row2" style="margin-bottom:6px">
+              <span class="lv-badge lv-best"><span class="ic">★</span>优</span>
+              <span class="lv-badge lv-good"><span class="ic">✓</span>良</span>
+              <span class="lv-badge lv-dubious"><span class="ic">?</span>疑</span>
+              <span class="lv-badge lv-blunder"><span class="ic">✕</span>劣</span>
+              <span class="lv-badge lv-missed"><span class="ic">‼</span>漏</span>
+            </div>
+            <div class="tiny muted" style="line-height:1.65">
+              五档评价由「该着法与引擎最优着法的评分损失」客观换算。
+              每档配以<b>不同图标形状</b>而非仅靠颜色区分，兼顾色觉障碍用户。
+            </div>
+          </div>
+
+          <div class="tiny muted" style="text-align:center;padding:6px 0">
+            以上为原型演示数据 · 实际讲解由本地模板 + AI 教练双路径生成
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 页面 4：联网房间 ============ -->
+<section class="page" id="page-room">
+  <div class="wrap">
+    <div class="page-head">
+      <h2>等待对手</h2>
+      <p>把房间号发给好友，或等待快速匹配</p>
+    </div>
+    <div class="room-layout">
+      <div class="panel pad">
+        <div class="sec-title">房间号</div>
+        <div class="room-code-box">
+          <div class="room-code">A7K2M9</div>
+          <div class="tiny muted" style="margin-top:8px">点击复制 · 6 位房间号，30 分钟无操作自动关闭</div>
+        </div>
+        <div class="vstack" style="margin-top:16px">
+          <div class="seat">
+            <div class="avatar">帅</div>
+            <div class="who">
+              <div class="name">你（游客_3821）</div>
+              <div class="meta">红方 · 等级分 1500</div>
+            </div>
+            <div class="st">已准备</div>
+          </div>
+          <div class="seat empty">
+            <div class="spinner" style="background:transparent"></div>
+            <div class="who">
+              <div class="name muted">等待对手加入…</div>
+              <div class="meta">对手加入后将自动分配黑方</div>
+            </div>
+            <div class="st wait">— </div>
+          </div>
+        </div>
+        <div class="hstack" style="margin-top:20px">
+          <button class="btn primary" data-go="game">模拟对手加入并开局</button>
+          <button class="btn" data-go="menu">取消</button>
+        </div>
+      </div>
+
+      <div class="vstack">
+        <div class="panel pad">
+          <div class="sec-title">房间设置</div>
+          <div class="kv"><span>局时</span><span>10 分钟</span></div>
+          <div class="kv"><span>步时</span><span>30 秒</span></div>
+          <div class="kv"><span>允许观战</span><span>是（延迟 3 秒）</span></div>
+          <div class="kv"><span>允许悔棋</span><span>是（每局 3 次）</span></div>
+          <div class="kv"><span>断线保留</span><span>120 秒</span></div>
+        </div>
+        <div class="panel pad">
+          <div class="sec-title">观战（2）</div>
+          <div class="watching">
+            <span class="w">👤 观棋不语</span>
+            <span class="w">👤 新手学棋</span>
+          </div>
+          <div class="tiny muted" style="margin-top:12px;line-height:1.65">
+            观战画面统一延迟 3 秒下发，防止通过观战向对局方传递实时局面。
+            服务端实现，客户端无法绕过。
+          </div>
+        </div>
+        <div class="panel pad">
+          <div class="sec-title">连接状态</div>
+          <div class="kv"><span> WebSocket</span><span style="color:#1E7B4D">已连接</span></div>
+          <div class="kv"><span>往返延迟</span><span>32 ms</span></div>
+          <div class="kv"><span>服务端时钟偏移</span><span>+8 ms</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 页面 5：复盘分析 ============ -->
+<section class="page" id="page-review">
+  <div class="wrap">
+    <div class="page-head" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+      <div style="flex:1">
+        <h2>复盘分析</h2>
+        <p>人机对战 · 中级 · 演示片段 共 10 着 · 2026-09-23 09:12</p>
+      </div>
+      <div class="game-actions">
+        <button class="btn sm">|◀ 首着</button>
+        <button class="btn sm">◀ 上一着</button>
+        <button class="btn sm">下一着 ▶</button>
+        <button class="btn sm">末着 ▶|</button>
+        <button class="btn sm primary">导出棋谱</button>
+      </div>
+    </div>
+
+    <div class="review-layout">
+      <div class="board-col">
+        <div class="board-shell">
+          <svg class="board" viewBox="0 0 560 620" xmlns="http://www.w3.org/2000/svg">
+            <!--@BOARD_SVG_REVIEW@-->
+            <g id="layer-pieces-review">
+              <!--@PIECES_REVIEW@-->
+            </g>
+          </svg>
+        </div>
+        <div class="board-legend">
+          <span>当前查看：第 10 着 · 黑 · 车1平2</span>
+          <span class="muted">（原型未渲染高亮层）</span>
+        </div>
+      </div>
+
+      <div class="vstack">
+        <div class="panel pad">
+          <div class="sec-title">着法列表</div>
+          <div class="movelist">
+            <span class="no">1</span>
+            <span class="m"><i class="d d-best"></i>炮二平五</span>
+            <span class="m"><i class="d d-best"></i>马8进7</span>
+            <span class="no">2</span>
+            <span class="m"><i class="d d-best"></i>马二进三</span>
+            <span class="m"><i class="d d-good"></i>车9平8</span>
+            <span class="no">3</span>
+            <span class="m"><i class="d d-best"></i>车一平二</span>
+            <span class="m"><i class="d d-dubious"></i>卒7进1</span>
+            <span class="no">4</span>
+            <span class="m"><i class="d d-good"></i>车二进六</span>
+            <span class="m"><i class="d d-best"></i>马2进3</span>
+            <span class="no">5</span>
+            <span class="m"><i class="d d-best"></i>马八进七</span>
+            <span class="m on"><i class="d d-good"></i>车1平2</span>
+          </div>
+        </div>
+
+        <div class="panel pad">
+          <div class="sec-title">失误统计</div>
+          <div class="stat-row">
+            <span class="lb">红方</span>
+            <span class="track">
+              <i style="width:80%;background:var(--c-best)"></i>
+              <i style="width:20%;background:var(--c-good)"></i>
+            </span>
+            <span class="n">优 4</span>
+          </div>
+          <div class="stat-row">
+            <span class="lb">黑方</span>
+            <span class="track">
+              <i style="width:40%;background:var(--c-best)"></i>
+              <i style="width:40%;background:var(--c-good)"></i>
+              <i style="width:20%;background:var(--c-dubious)"></i>
+            </span>
+            <span class="n">优 2</span>
+          </div>
+          <div class="tiny muted" style="margin-top:10px;line-height:1.7">
+            红方：优 4 · 良 1 · 疑 0 · 劣 0 · 漏 0<br>
+            黑方：优 2 · 良 2 · 疑 1 · 劣 0 · 漏 0
+          </div>
+        </div>
+
+        <div class="panel pad">
+          <div class="sec-title">关键转折点</div>
+          <div class="tl-item">
+            <span class="t">第 3 回合</span>
+            <span>黑方 <b>卒7进1</b> 节奏稍缓，未及时出车抢占要道。</span>
+          </div>
+          <div class="tl-item">
+            <span class="t">第 4 回合</span>
+            <span>红方 <b>车二进六</b> 过河压马，取得空间优势与主动。</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  // 页面切换
+  const pages = document.querySelectorAll('.page');
+  const tabs  = document.querySelectorAll('.nav-tabs button');
+  function go(name){
+    pages.forEach(p => p.classList.toggle('on', p.id === 'page-'+name));
+    tabs.forEach(b => b.classList.toggle('on', b.dataset.page === name));
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+  tabs.forEach(b => b.addEventListener('click', () => go(b.dataset.page)));
+  document.querySelectorAll('[data-go]').forEach(el =>
+    el.addEventListener('click', () => go(el.dataset.go)));
+
+  // 难度选择联动右侧预览
+  const LV = {
+    1:{n:'入门',d:'刚学会走法，适合熟悉规则',dep:'2 层',t:'50 毫秒内',m:'30%',b:'不使用',w:20},
+    2:{n:'初级',d:'会基本的吃子与防守',      dep:'4 层',t:'200 毫秒内',m:'15%',b:'不使用',w:35},
+    3:{n:'中级',d:'有基本战术意识，会计算几步',dep:'6 层',t:'1 秒内',   m:'5%', b:'浅层',  w:60},
+    4:{n:'高级',d:'会布局与组合战术，算得较深',dep:'8 层',t:'3 秒内',   m:'0%', b:'完整',  w:80},
+    5:{n:'大师',d:'接近业余强手水平',        dep:'10~12 层',t:'3 秒内',m:'0%', b:'完整',  w:100}
+  };
+  document.querySelectorAll('#lvlRow .opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#lvlRow .opt').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      const v = LV[btn.dataset.l];
+      document.getElementById('pvName').textContent  = v.n;
+      document.getElementById('pvDesc').textContent  = v.d;
+      document.getElementById('pvDepth').textContent = v.dep;
+      document.getElementById('pvTime').textContent  = v.t;
+      document.getElementById('pvMiss').textContent  = v.m;
+      document.getElementById('pvBook').textContent  = v.b;
+      document.getElementById('pvBar').style.width   = v.w + '%';
+    });
+  });
+
+  // 其余选项组（单选）
+  document.querySelectorAll('.opt-row').forEach(row => {
+    if (row.id === 'lvlRow') return;
+    row.querySelectorAll('.opt').forEach(o => o.addEventListener('click', () => {
+      row.querySelectorAll('.opt').forEach(x => x.classList.remove('on'));
+      o.classList.add('on');
+    }));
+  });
+
+  // 着法列表点击高亮
+  document.querySelectorAll('.movelist .m').forEach(m => m.addEventListener('click', () => {
+    document.querySelectorAll('.movelist .m').forEach(x => x.classList.remove('on'));
+    m.classList.add('on');
+  }));
+
+  // 讲解语体切换
+  document.querySelectorAll('.coach-head .seg button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.coach-head .seg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+  }));
+
+  // 演示连接状态（进入联网房间页时短暂显示重连，展示降级状态）
+  const dot = document.getElementById('connDot'), txt = document.getElementById('connText');
+  document.querySelector('[data-page="room"]').addEventListener('click', () => {
+    dot.classList.remove('off'); txt.textContent = '已连接 · 延迟 32ms';
+  });
+
+  // 支持 URL hash 直达页面：index.html#game —— 便于分享具体页面与自动化截图
+  const initial = location.hash.replace(/^#/, '');
+  if (initial && document.getElementById('page-' + initial)) go(initial);
+  window.addEventListener('hashchange', () => {
+    const h = location.hash.replace(/^#/, '');
+    if (h && document.getElementById('page-' + h)) go(h);
+  });
+})();
+</script>
+</body>
+</html>

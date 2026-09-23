@@ -1,0 +1,651 @@
+{
+  "version": "1.0.0",
+  "status": "initial",
+  "generated_for": "弈道 / chinese-chess-rs",
+  "note": "战术模式库。L1/L2 层由 xq-core 与 xq-coach 的算法精确判定；L3 层为声明式棋形匹配，其坐标约束为初始定义，必须用真实棋谱样本校准后回写（见 docs/05 §3.4）。",
+  "layers": {
+    "L1": {
+      "key": "structure",
+      "label": "结构层",
+      "detector": "builtin",
+      "reliability": "确定",
+      "ui_note": "可直接作为结论展示"
+    },
+    "L2": {
+      "key": "relation",
+      "label": "关系层",
+      "detector": "builtin",
+      "reliability": "高（可测试）",
+      "ui_note": "正常展示"
+    },
+    "L3": {
+      "key": "formation",
+      "label": "棋形层",
+      "detector": "pattern",
+      "reliability": "取决于棋形定义质量",
+      "ui_note": "置信度低于 0.70 时以弱化样式展示，避免误导"
+    }
+  },
+  "tactics": [
+    {
+      "id": "check",
+      "name": "将军",
+      "category": "structure",
+      "layer": "L1",
+      "detector": "builtin",
+      "confidence_base": 1.0,
+      "description": "走子后对方将帅处于被攻击状态，对方必须立即应对。",
+      "explanation_template": "tpl.check"
+    },
+    {
+      "id": "double_check",
+      "name": "双将",
+      "category": "structure",
+      "layer": "L1",
+      "detector": "builtin",
+      "confidence_base": 1.0,
+      "description": "同时被两个及以上棋子将军，对方无法通过垫子或吃子解除，只能移将。",
+      "explanation_template": "tpl.double_check"
+    },
+    {
+      "id": "discovered_check",
+      "name": "闪将",
+      "category": "structure",
+      "layer": "L1",
+      "detector": "builtin",
+      "confidence_base": 1.0,
+      "description": "移动一个棋子后，原本被它挡住的我方另一子形成将军。",
+      "explanation_template": "tpl.discovered_check"
+    },
+    {
+      "id": "capture",
+      "name": "吃子",
+      "category": "structure",
+      "layer": "L1",
+      "detector": "builtin",
+      "confidence_base": 1.0,
+      "description": "目标格上存在对方棋子，本步将其吃掉。",
+      "explanation_template": "tpl.capture"
+    },
+    {
+      "id": "mate",
+      "name": "绝杀",
+      "category": "structure",
+      "layer": "L1",
+      "detector": "builtin",
+      "confidence_base": 1.0,
+      "description": "走子后对方被将军且无任何合法着法，对局结束。",
+      "explanation_template": "tpl.mate"
+    },
+    {
+      "id": "stalemate_win",
+      "name": "困毙",
+      "category": "structure",
+      "layer": "L1",
+      "detector": "builtin",
+      "confidence_base": 1.0,
+      "description": "走子后对方未被将军但无任何合法着法。中国象棋中困毙方判负（与国际象棋判和不同）。",
+      "explanation_template": "tpl.stalemate_win"
+    },
+    {
+      "id": "resolve_check",
+      "name": "解将",
+      "category": "structure",
+      "layer": "L1",
+      "detector": "builtin",
+      "confidence_base": 1.0,
+      "description": "上一步己方被将军，本步解除将军状态。",
+      "explanation_template": "tpl.resolve_check"
+    },
+    {
+      "id": "interpose",
+      "name": "垫将",
+      "category": "structure",
+      "layer": "L1",
+      "detector": "builtin",
+      "confidence_base": 1.0,
+      "description": "把棋子放到将帅与攻击者之间，阻断攻击线来解将。",
+      "explanation_template": "tpl.interpose"
+    },
+    {
+      "id": "king_escape",
+      "name": "避将",
+      "category": "structure",
+      "layer": "L1",
+      "detector": "builtin",
+      "confidence_base": 1.0,
+      "description": "移动将帅离开被攻击的位置来解将。",
+      "explanation_template": "tpl.king_escape"
+    },
+    {
+      "id": "capture_attacker",
+      "name": "吃将子",
+      "category": "structure",
+      "layer": "L1",
+      "detector": "builtin",
+      "confidence_base": 1.0,
+      "description": "吃掉正在将军的那枚棋子来解将。",
+      "explanation_template": "tpl.capture_attacker"
+    },
+
+    {
+      "id": "fork",
+      "name": "捉双",
+      "category": "relation",
+      "layer": "L2",
+      "detector": "builtin",
+      "confidence_base": 0.85,
+      "description": "一步棋同时威胁对方两个及以上棋子（不含将帅），对方无法一次性全部保全。",
+      "detection": {
+        "rule": "走子后枚举新产生的攻击目标集合 T，排除将帅；对每个 t 计算吃掉后的交换损益 loss(t)；若存在 >= 2 个 t 使 loss(t) > 0 则判定成立。",
+        "confidence_formula": "min(损失最大的两个目标价值之和 / 400, 1.0)",
+        "conservative_note": "采用一层交换近似，宁可漏报不可误报"
+      },
+      "explanation_template": "tpl.fork"
+    },
+    {
+      "id": "pin",
+      "name": "牵制",
+      "category": "relation",
+      "layer": "L2",
+      "detector": "builtin",
+      "confidence_base": 0.80,
+      "description": "对方某棋子被攻击，且它一旦移动就会暴露身后更大的目标（车或将帅）。",
+      "detection": {
+        "rule": "攻击线上目标子后方存在价值更高的同方棋子（含将帅），且目标子移动后该后置目标将直接暴露。"
+      },
+      "explanation_template": "tpl.pin"
+    },
+    {
+      "id": "skewer",
+      "name": "串打",
+      "category": "relation",
+      "layer": "L2",
+      "detector": "builtin",
+      "confidence_base": 0.78,
+      "description": "与牵制相反：攻击线上前面的棋子价值更高，被迫移动后后方的棋子被吃掉。",
+      "detection": {
+        "rule": "攻击线上两枚对方棋子，前子价值高于后子，且前子被攻击后无等价保护。"
+      },
+      "explanation_template": "tpl.skewer"
+    },
+    {
+      "id": "discovered_attack",
+      "name": "闪击",
+      "category": "relation",
+      "layer": "L2",
+      "detector": "builtin",
+      "confidence_base": 0.80,
+      "description": "移动一子后，原本被它挡住的我方另一子形成对非将帅棋子的攻击。",
+      "detection": {
+        "rule": "存在被本次移动解除遮挡的我方棋子，且其攻击目标为非将帅的对方棋子。"
+      },
+      "explanation_template": "tpl.discovered_attack"
+    },
+    {
+      "id": "threat",
+      "name": "威胁",
+      "category": "relation",
+      "layer": "L2",
+      "detector": "builtin",
+      "confidence_base": 0.70,
+      "description": "走子后形成对对方棋子或关键点的下一步威胁（非即时攻击）。",
+      "detection": {
+        "rule": "下一步的合法着法中存在能获得实质收益的着法（吃子或形成将军），且对方难以一次化解。"
+      },
+      "explanation_template": "tpl.threat"
+    },
+    {
+      "id": "blockade",
+      "name": "封锁",
+      "category": "relation",
+      "layer": "L2",
+      "detector": "builtin",
+      "confidence_base": 0.72,
+      "description": "走子后使对方某棋子的可选着法数显著下降，限制其机动性。",
+      "detection": {
+        "rule": "对方所有棋子合法着法总数相比走子前下降超过 20%，或特定棋子的着法数下降超过 50%。",
+        "todo": "阈值 20% / 50% 为初始估计，需用棋谱样本校准"
+      },
+      "explanation_template": "tpl.blockade"
+    },
+    {
+      "id": "exchange_offer",
+      "name": "邀兑",
+      "category": "relation",
+      "layer": "L2",
+      "detector": "builtin",
+      "confidence_base": 0.75,
+      "description": "主动提出等价交换的着法，通常用于简化局面或改善子力结构。",
+      "detection": {
+        "rule": "本步攻击对方棋子，且被攻击子价值与攻击子价值相近，交换后双方子力净值变化在 ±100 厘兵以内。"
+      },
+      "explanation_template": "tpl.exchange_offer"
+    },
+    {
+      "id": "sacrifice",
+      "name": "弃子",
+      "category": "relation",
+      "layer": "L2",
+      "detector": "builtin",
+      "confidence_base": 0.75,
+      "description": "主动把棋子置于可被吃掉的位置，以换取杀势、攻势或位置补偿。",
+      "detection": {
+        "rule": "本步后己方某棋子可被对方无代价吃掉，但引擎评估该着法与最优着法差距在可接受范围内（<= 50 厘兵），说明存在实质补偿。"
+      },
+      "explanation_template": "tpl.sacrifice"
+    },
+    {
+      "id": "win_material",
+      "name": "得子",
+      "category": "relation",
+      "layer": "L2",
+      "detector": "builtin",
+      "confidence_base": 0.85,
+      "description": "该着法导致后续必然净赚子力。",
+      "detection": {
+        "rule": "该着法相对上一步的最优着法，评估提升超过 150 厘兵（1.5 个兵）。"
+      },
+      "explanation_template": "tpl.win_material"
+    },
+    {
+      "id": "lose_material",
+      "name": "失子",
+      "category": "relation",
+      "layer": "L2",
+      "detector": "builtin",
+      "confidence_base": 0.85,
+      "description": "该着法导致后续净损子力。",
+      "detection": {
+        "rule": "该着法评估损失超过 150 厘兵（1.5 个兵）。"
+      },
+      "explanation_template": "tpl.lose_material"
+    },
+    {
+      "id": "open_file",
+      "name": "通线",
+      "category": "relation",
+      "layer": "L2",
+      "detector": "builtin",
+      "confidence_base": 0.70,
+      "description": "走子后为车或炮打通了纵向通道（该线上己方兵卒减少）。",
+      "detection": {
+        "rule": "本步移开了某条纵线上己方唯一的兵卒，使该线上的己方车或炮获得纵线控制。"
+      },
+      "explanation_template": "tpl.open_file"
+    },
+    {
+      "id": "central_control",
+      "name": "中路控制",
+      "category": "relation",
+      "layer": "L2",
+      "detector": "builtin",
+      "confidence_base": 0.72,
+      "description": "走子后对中路关键点（特别是对方将帅前方）形成控制或压力。",
+      "detection": {
+        "rule": "本步后己方棋子控制了中路纵线（col 4）或直接攻击对方将帅所在纵线。"
+      },
+      "explanation_template": "tpl.central_control"
+    },
+
+    {
+      "id": "horse_rear_cannon",
+      "name": "马后炮",
+      "category": "formation",
+      "layer": "L3",
+      "detector": "pattern",
+      "confidence_base": 0.78,
+      "description": "炮以马为炮架，马在炮前方将军，形成典型杀势。",
+      "pattern": {
+        "attacker": { "kind": "cannon" },
+        "constraints": [
+          { "predicate": "attacker_checks_king" },
+          { "predicate": "has_own_piece_as_screen", "kind": "horse" },
+          { "predicate": "screen_piece_adjacent_to_king", "distance": 2 },
+          { "predicate": "attacker_same_file_or_rank_as_king" }
+        ]
+      },
+      "explanation_template": "tpl.horse_rear_cannon",
+      "calibration": "required"
+    },
+    {
+      "id": "horse_corner_check",
+      "name": "挂角马",
+      "category": "formation",
+      "layer": "L3",
+      "detector": "pattern",
+      "confidence_base": 0.70,
+      "description": "马跳到对方九宫角附近将军，配合其他子力形成杀势。",
+      "pattern": {
+        "attacker": { "kind": "horse" },
+        "constraints": [
+          { "predicate": "attacker_checks_king" },
+          { "predicate": "attacker_in_enemy_half" },
+          { "predicate": "attacker_adjacent_to_palace_corner", "distance": 1 }
+        ]
+      },
+      "explanation_template": "tpl.horse_corner_check",
+      "calibration": "required"
+    },
+    {
+      "id": "horse_slot_check",
+      "name": "卧槽马",
+      "category": "formation",
+      "layer": "L3",
+      "detector": "pattern",
+      "confidence_base": 0.68,
+      "description": "马深入对方底线侧翼将军，逼近将门。",
+      "pattern": {
+        "attacker": { "kind": "horse" },
+        "constraints": [
+          { "predicate": "attacker_checks_king" },
+          { "predicate": "attacker_in_enemy_half" },
+          { "predicate": "attacker_on_rank", "row_offset_from_enemy_base": 2 },
+          { "predicate": "attacker_outside_palace" },
+          { "predicate": "attacker_horizontal_distance_to_palace", "min": 1, "max": 2 }
+        ]
+      },
+      "explanation_template": "tpl.horse_slot_check",
+      "calibration": "required"
+    },
+    {
+      "id": "double_cannon_stack",
+      "name": "重炮",
+      "category": "formation",
+      "layer": "L3",
+      "detector": "pattern",
+      "confidence_base": 0.80,
+      "description": "两枚炮在同一条纵向或横向线上叠置，后炮以前炮为炮架攻击将帅。",
+      "pattern": {
+        "attacker": { "kind": "cannon" },
+        "constraints": [
+          { "predicate": "attacker_checks_king" },
+          { "predicate": "has_own_piece_as_screen", "kind": "cannon" },
+          { "predicate": "own_piece_count_on_line", "kind": "cannon", "min": 2 }
+        ]
+      },
+      "explanation_template": "tpl.double_cannon_stack",
+      "calibration": "required"
+    },
+    {
+      "id": "heaven_earth_cannon",
+      "name": "天地炮",
+      "category": "formation",
+      "layer": "L3",
+      "detector": "pattern",
+      "confidence_base": 0.70,
+      "description": "一枚炮在中路、一枚炮在对方底线协同，形成上下夹击之势。",
+      "pattern": {
+        "attacker": { "kind": "cannon" },
+        "constraints": [
+          { "predicate": "own_piece_count_on_file", "kind": "cannon", "col": 4, "min": 1 },
+          { "predicate": "own_piece_on_enemy_base_rank", "kind": "cannon", "min": 1 },
+          { "predicate": "attacker_checks_king_within_n_plies", "plies": 3 }
+        ]
+      },
+      "explanation_template": "tpl.heaven_earth_cannon",
+      "calibration": "required"
+    },
+    {
+      "id": "hollow_cannon",
+      "name": "空头炮",
+      "category": "formation",
+      "layer": "L3",
+      "detector": "pattern",
+      "confidence_base": 0.75,
+      "description": "中炮与对方将帅之间无任何棋子阻挡，直接形成威慑。",
+      "pattern": {
+        "attacker": { "kind": "cannon" },
+        "constraints": [
+          { "predicate": "attacker_same_file_as_king" },
+          { "predicate": "attacker_on_central_file" },
+          { "predicate": "no_piece_between_attacker_and_king" }
+        ]
+      },
+      "explanation_template": "tpl.hollow_cannon",
+      "calibration": "required"
+    },
+    {
+      "id": "iron_bolt",
+      "name": "铁门栓",
+      "category": "formation",
+      "layer": "L3",
+      "detector": "pattern",
+      "confidence_base": 0.68,
+      "description": "中炮牵制对方中路防守棋子，配合车控制将门，使对方将帅无法脱身。",
+      "pattern": {
+        "attacker": { "kind": "chariot" },
+        "constraints": [
+          { "predicate": "own_piece_count_on_file", "kind": "cannon", "col": 4, "min": 1 },
+          { "predicate": "attacker_on_king_file" },
+          { "predicate": "enemy_king_escape_blocked", "min": 2 }
+        ]
+      },
+      "explanation_template": "tpl.iron_bolt",
+      "calibration": "required"
+    },
+    {
+      "id": "twin_ghosts_door",
+      "name": "二鬼拍门",
+      "category": "formation",
+      "layer": "L3",
+      "detector": "pattern",
+      "confidence_base": 0.66,
+      "description": "两枚棋子（通常为兵或车）同时逼近对方九宫正面，形成双点威胁。",
+      "pattern": {
+        "attacker": { "kind": "any" },
+        "constraints": [
+          { "predicate": "own_pieces_adjacent_to_palace", "min": 2, "distance": 1 },
+          { "predicate": "attacker_checks_king" }
+        ]
+      },
+      "explanation_template": "tpl.twin_ghosts_door",
+      "calibration": "required"
+    },
+    {
+      "id": "double_chariot_alternate",
+      "name": "双车错",
+      "category": "formation",
+      "layer": "L3",
+      "detector": "pattern",
+      "confidence_base": 0.72,
+      "description": "两枚车交替将军，使对方将帅疲于应对最终成杀。",
+      "pattern": {
+        "attacker": { "kind": "chariot" },
+        "constraints": [
+          { "predicate": "attacker_checks_king" },
+          { "predicate": "own_piece_count_on_board", "kind": "chariot", "min": 2 },
+          { "predicate": "attacker_checks_king_within_n_plies", "plies": 3 }
+        ]
+      },
+      "explanation_template": "tpl.double_chariot_alternate",
+      "calibration": "required"
+    },
+    {
+      "id": "smothered_palace",
+      "name": "闷宫",
+      "category": "formation",
+      "layer": "L3",
+      "detector": "pattern",
+      "confidence_base": 0.82,
+      "description": "将帅被己方棋子堵死所有退路，无法应对将军而被将死。",
+      "pattern": {
+        "attacker": { "kind": "any" },
+        "constraints": [
+          { "predicate": "attacker_checks_king" },
+          { "predicate": "enemy_king_escape_blocked_by_own_pieces", "min": 3 },
+          { "predicate": "enemy_king_has_no_legal_move" }
+        ]
+      },
+      "explanation_template": "tpl.smothered_palace",
+      "calibration": "required"
+    },
+    {
+      "id": "flank_tiger",
+      "name": "侧面虎",
+      "category": "formation",
+      "layer": "L3",
+      "detector": "pattern",
+      "confidence_base": 0.68,
+      "description": "车与马从侧翼配合，形成对将帅的立体攻势。",
+      "pattern": {
+        "attacker": { "kind": "chariot" },
+        "constraints": [
+          { "predicate": "attacker_checks_king" },
+          { "predicate": "own_piece_near_king", "kind": "horse", "distance": 2 },
+          { "predicate": "attacker_on_flank_rank" }
+        ]
+      },
+      "explanation_template": "tpl.flank_tiger",
+      "calibration": "required"
+    },
+    {
+      "id": "sea_bottom_moon",
+      "name": "海底捞月",
+      "category": "formation",
+      "layer": "L3",
+      "detector": "pattern",
+      "confidence_base": 0.62,
+      "description": "车深入对方底线后方，从将帅背后方向形成攻势。（残局常见杀法）",
+      "pattern": {
+        "attacker": { "kind": "chariot" },
+        "constraints": [
+          { "predicate": "attacker_on_enemy_base_rank" },
+          { "predicate": "attacker_same_file_as_king" },
+          { "predicate": "own_piece_on_king_file", "min": 1 }
+        ]
+      },
+      "explanation_template": "tpl.sea_bottom_moon",
+      "calibration": "required"
+    },
+    {
+      "id": "heart_pierce",
+      "name": "大刀剜心",
+      "category": "formation",
+      "layer": "L3",
+      "detector": "pattern",
+      "confidence_base": 0.65,
+      "description": "主动弃车吃掉对方中士，撕开九宫防线，为后续子力打通攻门通道。",
+      "pattern": {
+        "attacker": { "kind": "chariot" },
+        "constraints": [
+          { "predicate": "captured_piece_kind", "kind": "advisor" },
+          { "predicate": "captured_piece_in_enemy_palace" },
+          { "predicate": "attacker_is_sacrificed" }
+        ]
+      },
+      "explanation_template": "tpl.heart_pierce",
+      "calibration": "required"
+    },
+
+    {
+      "id": "opening_central_cannon",
+      "name": "中炮",
+      "category": "opening",
+      "layer": "L3",
+      "detector": "opening_sequence",
+      "confidence_base": 0.95,
+      "description": "炮平到中路直取将门，是最主流的开局体系。",
+      "aliases": ["当头炮"],
+      "explanation_template": "tpl.opening_central_cannon"
+    },
+    {
+      "id": "opening_screen_horse",
+      "name": "屏风马",
+      "category": "opening",
+      "layer": "L3",
+      "detector": "opening_sequence",
+      "confidence_base": 0.95,
+      "description": "双马并立中路两侧，形如屏风，稳固防守中路的经典布局。",
+      "explanation_template": "tpl.opening_screen_horse"
+    },
+    {
+      "id": "opening_pawn_probe",
+      "name": "仙人指路",
+      "category": "opening",
+      "layer": "L3",
+      "detector": "opening_sequence",
+      "confidence_base": 0.95,
+      "description": "先挺起七兵或三兵，试探对方应手，保留多种变化选择。",
+      "explanation_template": "tpl.opening_pawn_probe"
+    },
+    {
+      "id": "opening_elephant",
+      "name": "飞相局",
+      "category": "opening",
+      "layer": "L3",
+      "detector": "opening_sequence",
+      "confidence_base": 0.95,
+      "description": "先飞相固守，稳健型开局，后发制人。",
+      "explanation_template": "tpl.opening_elephant"
+    },
+    {
+      "id": "opening_cross_palace_cannon",
+      "name": "过宫炮",
+      "category": "opening",
+      "layer": "L3",
+      "detector": "opening_sequence",
+      "confidence_base": 0.92,
+      "description": "炮从一侧越过将帅所在宫区到另一侧，集中子力于一侧翼。",
+      "explanation_template": "tpl.opening_cross_palace_cannon"
+    },
+    {
+      "id": "opening_advisor_corner_cannon",
+      "name": "士角炮",
+      "category": "opening",
+      "layer": "L3",
+      "detector": "opening_sequence",
+      "confidence_base": 0.92,
+      "description": "炮平到仕角位置，兼顾中路与侧翼的灵活布局。",
+      "explanation_template": "tpl.opening_advisor_corner_cannon"
+    },
+    {
+      "id": "opening_single_horse",
+      "name": "单提马",
+      "category": "opening",
+      "layer": "L3",
+      "detector": "opening_sequence",
+      "confidence_base": 0.90,
+      "description": "一马正起、一马横起的不对称布局，灵活多变。",
+      "explanation_template": "tpl.opening_single_horse"
+    },
+    {
+      "id": "opening_reverse_screen_horse",
+      "name": "反宫马",
+      "category": "opening",
+      "layer": "L3",
+      "detector": "opening_sequence",
+      "confidence_base": 0.92,
+      "description": "以士角炮配合屏风马，对付中炮的防守反击体系。",
+      "explanation_template": "tpl.opening_reverse_screen_horse"
+    },
+    {
+      "id": "opening_same_side_cannon",
+      "name": "顺炮",
+      "category": "opening",
+      "layer": "L3",
+      "detector": "opening_sequence",
+      "confidence_base": 0.92,
+      "description": "双方中炮位于同侧，形成对攻性格强烈的布局。",
+      "explanation_template": "tpl.opening_same_side_cannon"
+    },
+    {
+      "id": "opening_opposite_cannon",
+      "name": "列炮",
+      "category": "opening",
+      "layer": "L3",
+      "detector": "opening_sequence",
+      "confidence_base": 0.92,
+      "description": "双方中炮位于异侧，各自争取一侧的进攻主动权。",
+      "explanation_template": "tpl.opening_opposite_cannon"
+    }
+  ],
+  "statistics": {
+    "total": 45,
+    "structure_layer": 10,
+    "relation_layer": 12,
+    "formation_layer": 13,
+    "opening": 10,
+    "note": "45 条 = L1 结构层 10 + L2 关系层 12 + L3 棋形层 13 + L3 开局类 10。开局类同属 L3 层（detector 为 opening_sequence），故 L3 合计 23 条。满足 docs/01 FR-03.04 的「模式库 >= 20 类」要求。"
+  }
+}

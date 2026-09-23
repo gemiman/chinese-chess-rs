@@ -1,0 +1,215 @@
+{
+  "version": "1.0.0",
+  "status": "initial",
+  "note": "棋形约束谓词库。tactics.json 中 L3 层 pattern.constraints 引用的谓词必须在此定义，构建期校验（scripts/validate_knowledge.py）会强制检查引用完整性。",
+  "conventions": {
+    "attacker": "本步移动的那枚棋子",
+    "enemy": "attacker 的对方",
+    "own": "attacker 的己方",
+    "palace": "九宫，3x3 区域。红方 col∈[3,5] row∈[0,2]；黑方 col∈[3,5] row∈[7,9]",
+    "enemy_base_rank": "对方底线所在的行（红方视角下为 row 9）",
+    "distance": "单位为格（曼哈顿或切比雪夫距离由各谓词自行说明）"
+  },
+  "predicates": [
+    {
+      "id": "attacker_checks_king",
+      "params": [],
+      "meaning": "attacker 走子后正在将军对方将帅。",
+      "hint": "直接复用 xq-core 的 is_in_check(enemy) 且能定位到 attacker 为攻击者。"
+    },
+    {
+      "id": "has_own_piece_as_screen",
+      "params": [{ "name": "kind", "type": "piece_kind", "required": true }],
+      "meaning": "attacker 与某目标之间存在恰好一枚己方指定类型的棋子作为炮架。",
+      "hint": "用于炮类棋形。注意炮架可以是任意方棋子，此谓词限定为「己方 + 指定类型」。"
+    },
+    {
+      "id": "screen_piece_adjacent_to_king",
+      "params": [{ "name": "distance", "type": "u8", "required": true }],
+      "meaning": "上述炮架与对方将帅的距离不超过 distance 格。",
+      "hint": "马后炮的核心特征：炮架（马）紧贴将帅。"
+    },
+    {
+      "id": "attacker_same_file_or_rank_as_king",
+      "params": [],
+      "meaning": "attacker 与对方将帅位于同一列或同一行。",
+      "hint": "直线攻击类棋形的前提。"
+    },
+    {
+      "id": "attacker_in_enemy_half",
+      "params": [],
+      "meaning": "attacker 位于对方半场。",
+      "hint": "红方 attacker 在 row∈[5,9]；黑方在 row∈[0,4]。"
+    },
+    {
+      "id": "attacker_adjacent_to_palace_corner",
+      "params": [{ "name": "distance", "type": "u8", "required": true }],
+      "meaning": "attacker 与对方九宫的四个角点之一的切比雪夫距离不超过 distance。",
+      "hint": "挂角马的判定基础。"
+    },
+    {
+      "id": "attacker_on_rank",
+      "params": [{ "name": "row_offset_from_enemy_base", "type": "u8", "required": true }],
+      "meaning": "attacker 位于距对方底线 row_offset 行的位置上。",
+      "hint": "卧槽马常位于对方底线往上第 2 行附近。"
+    },
+    {
+      "id": "attacker_outside_palace",
+      "params": [],
+      "meaning": "attacker 不在对方九宫内。",
+      "hint": "用于区分「宫外将军」与「宫内将军」。"
+    },
+    {
+      "id": "attacker_horizontal_distance_to_palace",
+      "params": [
+        { "name": "min", "type": "u8", "required": true },
+        { "name": "max", "type": "u8", "required": true }
+      ],
+      "meaning": "attacker 所在列到九宫列区间 [3,5] 的水平距离在上述范围内。",
+      "hint": "卧槽马位于九宫侧翼 1~2 列之外。"
+    },
+    {
+      "id": "attacker_same_file_as_king",
+      "params": [],
+      "meaning": "attacker 与对方将帅同列。",
+      "hint": ""
+    },
+    {
+      "id": "attacker_on_king_file",
+      "params": [],
+      "meaning": "attacker 位于对方将帅当前所在的那一列。",
+      "hint": "与 attacker_same_file_as_king 语义相同，保留用于表述不同棋形时的可读性。实现应共用同一函数。"
+    },
+    {
+      "id": "attacker_on_central_file",
+      "params": [],
+      "meaning": "attacker 位于中路（col 4）。",
+      "hint": ""
+    },
+    {
+      "id": "no_piece_between_attacker_and_king",
+      "params": [],
+      "meaning": "attacker 与对方将帅之间没有任何棋子。",
+      "hint": "空头炮的核心条件。"
+    },
+    {
+      "id": "own_piece_count_on_line",
+      "params": [
+        { "name": "kind", "type": "piece_kind", "required": true },
+        { "name": "min", "type": "u8", "required": true }
+      ],
+      "meaning": "attacker 所在的列或行上，己方指定类型棋子数量不少于 min。",
+      "hint": "重炮需要同一线上有两枚己方炮。"
+    },
+    {
+      "id": "own_piece_count_on_file",
+      "params": [
+        { "name": "kind", "type": "piece_kind", "required": true },
+        { "name": "min", "type": "u8", "required": true },
+        { "name": "col", "type": "u8", "required": false }
+      ],
+      "meaning": "指定列（缺省为 attacker 所在列）上己方指定类型棋子数量不少于 min。",
+      "hint": "天地炮/铁门栓需要中路有己方炮。"
+    },
+    {
+      "id": "own_piece_count_on_board",
+      "params": [
+        { "name": "kind", "type": "piece_kind", "required": true },
+        { "name": "min", "type": "u8", "required": true }
+      ],
+      "meaning": "棋盘上己方指定类型棋子总数不少于 min。",
+      "hint": ""
+    },
+    {
+      "id": "own_piece_on_enemy_base_rank",
+      "params": [
+        { "name": "kind", "type": "piece_kind", "required": true },
+        { "name": "min", "type": "u8", "required": true }
+      ],
+      "meaning": "己方指定类型棋子位于对方底线的数量不少于 min。",
+      "hint": "天地炮需要底炮。"
+    },
+    {
+      "id": "own_piece_on_king_file",
+      "params": [{ "name": "min", "type": "u8", "required": true }],
+      "meaning": "对方将帅所在列上，己方棋子（任意类型）数量不少于 min。",
+      "hint": "铁门栓与海底捞月的条件之一。"
+    },
+    {
+      "id": "own_piece_near_king",
+      "params": [
+        { "name": "kind", "type": "piece_kind", "required": true },
+        { "name": "distance", "type": "u8", "required": true }
+      ],
+      "meaning": "己方指定类型棋子与对方将帅的马步可达或指定距离内。",
+      "hint": "侧面虎中车马的配合关系。"
+    },
+    {
+      "id": "own_pieces_adjacent_to_palace",
+      "params": [
+        { "name": "min", "type": "u8", "required": true },
+        { "name": "distance", "type": "u8", "required": true }
+      ],
+      "meaning": "距对方九宫 distance 格以内的己方棋子数量不少于 min。",
+      "hint": "二鬼拍门需要两枚棋子同时逼近九宫。"
+    },
+    {
+      "id": "enemy_king_escape_blocked",
+      "params": [{ "name": "min", "type": "u8", "required": true }],
+      "meaning": "对方将帅至少 min 个可逃方向被棋子占据（不区分敌我）。",
+      "hint": "将帅在九宫内最多 4 个直行相邻格。"
+    },
+    {
+      "id": "enemy_king_escape_blocked_by_own_pieces",
+      "params": [{ "name": "min", "type": "u8", "required": true }],
+      "meaning": "对方将帅至少 min 个可逃方向被**其己方**棋子占据。",
+      "hint": "闷宫的判定条件：堵死将帅退路的是对方自己的棋子。"
+    },
+    {
+      "id": "enemy_king_has_no_legal_move",
+      "params": [],
+      "meaning": "对方将帅没有任何合法着法（考虑让子照面与九宫限制）。",
+      "hint": "闷宫与绝杀的辅助条件。"
+    },
+    {
+      "id": "attacker_checks_king_within_n_plies",
+      "params": [{ "name": "plies", "type": "u8", "required": true }],
+      "meaning": "在 attacker 一方连续走子 plies 步之内，能够形成将军。",
+      "hint": "用于「势」类棋形，需要浅层搜索支持，成本高于其他谓词。"
+    },
+    {
+      "id": "attacker_on_flank_rank",
+      "params": [],
+      "meaning": "attacker 位于对方半场的侧翼横线（非中路且接近九宫所在行）。",
+      "hint": "侧面虎的辅助条件。"
+    },
+    {
+      "id": "attacker_on_enemy_base_rank",
+      "params": [],
+      "meaning": "attacker 位于对方底线。",
+      "hint": ""
+    },
+    {
+      "id": "captured_piece_kind",
+      "params": [{ "name": "kind", "type": "piece_kind", "required": true }],
+      "meaning": "本步吃掉的棋子类型为指定类型。",
+      "hint": ""
+    },
+    {
+      "id": "captured_piece_in_enemy_palace",
+      "params": [],
+      "meaning": "被吃掉的棋子位于对方九宫内。",
+      "hint": "大刀剜心：吃掉的必须是对方宫内的士。"
+    },
+    {
+      "id": "attacker_is_sacrificed",
+      "params": [],
+      "meaning": "attacker 走子后处于可被对方无代价吃掉的状态。",
+      "hint": "需要一层交换评估（SEE）支持。"
+    }
+  ],
+  "piece_kinds": ["king", "advisor", "elephant", "horse", "chariot", "cannon", "pawn"],
+  "statistics": {
+    "total": 29
+  }
+}

@@ -1,0 +1,11 @@
+# pnpm 的配置入口（pnpm 10 起，package.json 里的 `pnpm` 字段不再被读取）。
+#
+# 为什么必须放行这两个包：pnpm 默认拦截依赖的 postinstall 脚本（供应链防护），
+# 而 esbuild 与 @swc/core 都靠 postinstall 落平台二进制 —— 不放行的话
+# `vite build` 会失败，且 pnpm 会直接以非零码退出。
+#
+# 只放行这两个：它们是完全可替换的构建工具（不接触凭证、不访问网络），
+# 其余依赖仍然保持脚本被拦截的状态。
+allowBuilds:
+  '@swc/core': true
+  esbuild: true
