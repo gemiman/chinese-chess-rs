@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"
+     role="img" aria-label="头像占位">
+  <defs>
+    <linearGradient id="av" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f2d9a4"/>
+      <stop offset="1" stop-color="#c9a15c"/>
+    </linearGradient>
+  </defs>
+  <!-- 头 -->
+  <circle cx="32" cy="23" r="11.5" fill="url(#av)" opacity=".62"/>
+  <!-- 肩 -->
+  <path d="M 11 63 C 11 46.5 20 39.5 32 39.5 C 44 39.5 53 46.5 53 63 Z"
+        fill="url(#av)" opacity=".62"/>
+</svg>

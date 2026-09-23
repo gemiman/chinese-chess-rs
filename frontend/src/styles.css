@@ -13,10 +13,13 @@
 
   /* 棋盘宽度：取「容器宽度」与「按一屏高度反推的宽度」中的小者。
      窗口变大棋盘跟着变大，但永远高不过一屏 —— 高过一屏就得滚动看棋，反而难用。
-     560/620 是棋盘宽高比，所以限高就等于限宽；减掉的 120px 是页头与内边距的占位。
+     560/620 是棋盘宽高比，所以限高就等于限宽。
+     减掉的 395px 是棋盘**上下所有非棋盘内容**的占位（实测值）：
+       页头 62 + 主区内边距 48 + 上钟条 137 + 下钟条 137 + 余量 11。
+     少留了这一截，下方那条钟就会掉出视口 —— 玩家看不见自己的时间，改动就白做了。
      时钟条共用这个变量，两者的左右边缘才会永远对齐。 */
-  --board-width: min(100%, calc((100vh - 120px) * 560 / 620));
-  --board-width: min(100%, calc((100dvh - 120px) * 560 / 620));
+  --board-width: min(100%, calc((100vh - 395px) * 560 / 620));
+  --board-width: min(100%, calc((100dvh - 395px) * 560 / 620));
 
   /* 棋子（红黑材质相同，只差字色） */
   --piece-red: #b3282d;
@@ -127,32 +130,19 @@ body {
 
 /* ------------------------------------------------------------ 对局时钟 */
 
+/* 一条计时条：左边是这一方的「圆盘」，右边是文字。
+   **上条显示对手、下条显示自己** —— 与参考图同构。 */
 .clock {
-  display: flex;
-  align-items: stretch;
-  flex-wrap: wrap;
-  gap: 10px;
+  /* 三列：左右各 1fr、中间 auto —— 圆盘才真正落在正中，
+     不会被两侧长短不一的文字顶偏。 */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
   /* 与棋盘同宽，左右边缘对齐 */
   width: var(--board-width);
   max-width: 1100px;
-  margin: 0 auto 12px;
-}
-
-.clock--off {
-  justify-content: center;
-}
-
-.clock__off {
-  font-size: 13px;
-  color: var(--ui-text-3);
-}
-
-.clock__face {
-  flex: 1 1 150px;
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 7px 14px;
+  padding: 8px 18px;
   border: 1px solid var(--ui-border);
   border-radius: var(--radius-md);
   background: var(--ui-panel);
@@ -161,75 +151,92 @@ body {
     background var(--dur-fast) var(--ease);
 }
 
+.clock--top {
+  margin: 0 auto 10px;
+}
+
+.clock--bottom {
+  margin: 10px auto 0;
+}
+
 /* 该谁走，谁的钟就亮起来 */
-.clock__face--active {
+.clock--active {
   border-color: var(--coach-good);
   background: rgba(46, 134, 222, 0.06);
 }
 
-/* 时间吃紧：颜色 + 粗细双通道，不只靠颜色 */
-.clock__face--low {
-  border-color: var(--coach-dubious);
+/* 时间吃紧：颜色 + 字重双通道，不只靠颜色 */
+.clock--low .clock__disc-num {
+  color: #ffd98a;
 }
 
-.clock__face--low .clock__step {
-  color: #b06a00;
-  font-weight: 600;
-}
-
-.clock__face--danger {
+.clock--danger {
   border-color: var(--state-check);
   background: rgba(208, 2, 27, 0.07);
 }
 
-.clock__face--danger .clock__step {
-  color: var(--state-check);
-  font-weight: 700;
+.clock--danger .clock__disc-num {
+  color: #ffb3b3;
 }
 
-.clock__label {
-  font-size: 13px;
-  color: var(--ui-text-2);
+/* --- 圆盘（头像位） --- */
+
+.clock__avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
 }
 
-.clock__base {
-  font-family: var(--font-mono);
-  font-size: 20px;
-  font-weight: 600;
-  /* 等宽数字：否则秒数跳动时整行宽度会来回抖 */
-  font-variant-numeric: tabular-nums;
-}
-
-.clock__step {
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--ui-text-2);
-  font-variant-numeric: tabular-nums;
-}
-
-.clock__step--idle {
-  color: var(--ui-text-3);
-}
-
-/* 倒计时环：素材只给底板，进度弧由这里画。
-   进度是运行时数据，烤进素材里应用就驱动不了 —— 见 assets/hud/timer-ring.svg。 */
-.clock__ring {
+/* 环与圆盘共用的方框：环套在外圈，圆盘居中缩在里面 */
+.clock__dial {
   position: relative;
   flex: none;
-  width: 46px;
-  height: 46px;
-  margin-left: auto;
+  width: 84px;
+  height: 84px;
 }
 
-.clock__ring img {
+.clock__disc {
   position: absolute;
-  inset: 0;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  /* 直径要落在环的内沿里：环的可见带在 0.72~0.87 半径处，
+     84px 方框对应 30.2~36.5px 半径，所以圆盘直径取 54px（半径 27）刚好留一点缝。 */
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  /* **头像占位**：以后这里换成真实头像 + 会员角标。
+     现在只用一层中性渐变，别做得太抢眼。 */
+  background: radial-gradient(circle at 38% 30%, #5d4d38, #2c2118 78%);
+  border: 1px solid rgba(232, 192, 121, 0.32);
+  box-shadow: inset 0 1px 2px rgba(255, 220, 160, 0.18);
+}
+
+.clock__disc-num {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff6dc;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+/* 没轮到这一方时，圆盘上显示头像（现在是占位图形，将来换成真实头像） */
+.clock__disc-avatar {
   width: 100%;
   height: 100%;
   display: block;
+  border-radius: 50%;
 }
 
+/* 步时倒计时弧。
+   ⚠️ 刻意**不用** timer-ring.svg 那张底板：它里面有一块深色实心圆（r=45/70），
+   那是给「环里只有数字」准备的；这里环里要放头像，套上去会把头像整块盖住。
+   所以只画进度弧本身。 */
 .clock__ring-arc {
   position: absolute;
   inset: 0;
@@ -243,29 +250,68 @@ body {
   );
   -webkit-mask: radial-gradient(closest-side, transparent 71%, #000 72%, #000 87%, transparent 88%);
   mask: radial-gradient(closest-side, transparent 71%, #000 72%, #000 87%, transparent 88%);
-  filter: drop-shadow(0 0 4px rgba(255, 190, 61, 0.8));
+  filter: drop-shadow(0 0 5px rgba(255, 190, 61, 0.75));
 }
 
-.clock__ring-num {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
+/* 局时：挂在圆盘**下面** */
+.clock__base {
   font-family: var(--font-mono);
-  font-size: 15px;
-  font-weight: 700;
-  color: #fff6dc;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.1;
+  /* 等宽数字：否则秒数跳动时整行宽度会来回抖 */
   font-variant-numeric: tabular-nums;
-  text-shadow:
-    0 0 8px rgba(255, 190, 61, 0.9),
-    0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
-.clock__meta {
-  flex: 1 1 100%;
-  font-size: 12px;
+/* 圆盘两侧的文字列。左列靠左、右列靠右，中间那列（圆盘）因此永远居中。 */
+.clock__side {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.clock__side--left {
+  align-items: flex-start;
+}
+
+.clock__side--right {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.clock__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ui-text-2);
+}
+
+.clock__turn {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(46, 134, 222, 0.12);
+  color: var(--coach-good);
+}
+
+.clock__config {
+  font-size: 11.5px;
   color: var(--ui-text-3);
-  text-align: center;
+}
+
+.clock__idle {
+  font-size: 13px;
+  color: var(--ui-text-3);
+}
+
+/* 不限时：只留一个安静的圆盘，不抢戏 */
+.clock--off .clock__disc {
+  background: none;
+  border-style: dashed;
+  border-color: var(--ui-border);
+  box-shadow: none;
 }
 
 /* ------------------------------------------------------------ 战法名出场 */

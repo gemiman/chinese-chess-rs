@@ -79,6 +79,7 @@ export default function App() {
             side={state.side}
             flipped={flipped}
             over={state.status.over}
+            position="top"
           />
           <div className="board-holder">
             <Board
@@ -92,6 +93,13 @@ export default function App() {
             />
             <TacticReveal note={coachNote} />
           </div>
+          <ClockBar
+            clock={state.clock}
+            side={state.side}
+            flipped={flipped}
+            over={state.status.over}
+            position="bottom"
+          />
           {error !== null ? (
             <div className="notice notice--error" style={{ marginTop: 16 }} role="alert">
               <strong>操作失败：</strong>
