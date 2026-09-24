@@ -88,6 +88,12 @@ export interface StateDto {
   cursor: number
   halfmove_clock: number
   fullmove_number: number
+  /**
+   * 自然限着的阈值（**半步**数）：`halfmove_clock` 累计到它就判和。
+   *
+   * 由 Rust 下发，前端**不写死**这个数 —— 规则一改两边就对不上，而且不会报错。
+   */
+  natural_limit_half_moves: number
   /** 棋钟。`null` 表示这一局不限时。 */
   clock: ClockDto | null
 }

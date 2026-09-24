@@ -90,6 +90,13 @@ interface ClockBarProps {
   autoLevels?: Record<Color, DifficultyId>
   /** 机机对战：这一方已经赢了几局（连播的累计战绩）。 */
   autoRecord?: Record<Color, number>
+  /**
+   * 自然限着的进度（**半步**数）。传了就显示「限着 12/60 回合」。
+   *
+   * 按**回合**显示而不是半步：规则本来的说法就是「60 回合内未吃子」，
+   * 而且 60 比 120 好读。换算放在这里做，调用方只管把两个数递进来。
+   */
+  naturalLimit?: { used: number; limit: number }
 }
 
 export function ClockBar({
@@ -102,6 +109,7 @@ export function ClockBar({
   onStepExpired,
   autoLevels,
   autoRecord,
+  naturalLimit,
 }: ClockBarProps) {
   const elapsed = useElapsed(clock)
 
@@ -113,6 +121,11 @@ export function ClockBar({
       ? null
       : (DIFFICULTIES.find((d) => d.id === autoLevels[shown])?.label ?? null)
   const wins = autoRecord === undefined ? null : autoRecord[shown]
+  // 自然限着按回合显示（阈值 120 个半步 = 60 回合）
+  const limitText =
+    naturalLimit === undefined || naturalLimit.limit === 0
+      ? null
+      : `限着 ${Math.floor(naturalLimit.used / 2)}/${Math.floor(naturalLimit.limit / 2)} 回合`
 
   // ⚠️ `active` 与 `stepLeftMs` 必须在下面那个「不限时」提前 return **之前**算出来 ——
   // Hook 不能写在条件分支后面。不限时时步时用无穷大表示「永远不会归零」。
@@ -147,7 +160,11 @@ export function ClockBar({
       <div className={`clock clock--${position} clock--off${reviewing ? ' clock--reviewing' : ''}`}>
         <span className="clock__side clock__side--left">
           {wins !== null ? <span className="clock__record">{wins} 胜</span> : null}
-          {reviewing ? <span className="clock__config">复盘</span> : null}
+          {reviewing ? (
+            <span className="clock__config">复盘</span>
+          ) : limitText !== null ? (
+            <span className="clock__config">{limitText}</span>
+          ) : null}
         </span>
         <span className="clock__avatar">
           <span className="clock__dial">
@@ -196,6 +213,9 @@ export function ClockBar({
             <>
               局时 {fmtBase(clock.base_secs * 1000)} · 步时 {clock.step_secs}s
               {clock.byoyomi_secs > 0 ? ` · 读秒 ${clock.byoyomi_secs}s` : ''}
+              {/* 限着进度并进同一行，不单开一行 —— 单开一行会把钟条撑高，
+                  而对局页是锁死一屏的，两条钟各高一截就得从棋盘里扣。 */}
+              {limitText !== null ? ` · ${limitText}` : ''}
             </>
           )}
         </span>

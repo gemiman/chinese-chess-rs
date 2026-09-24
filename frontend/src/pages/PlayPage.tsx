@@ -84,6 +84,13 @@ export function PlayPage({ state }: { state: StateDto }) {
   const [text, setText] = useState('')
   const secondsLeft = useCountdown(nextGameAt)
 
+  /**
+   * 自然限着的进度：累计多少个**半步**没吃子，以及阈值。
+   *
+   * 阈值来自 Rust，前端不写死 —— 规则改了这边自动跟上。
+   */
+  const naturalLimit = { used: state.halfmove_clock, limit: state.natural_limit_half_moves }
+
   const total = state.history.length
   const legalTargets = legalTargetsFrom(state, selected)
   /** 机机对战里人是观众，两边都不归他管。 */
@@ -143,6 +150,7 @@ export function PlayPage({ state }: { state: StateDto }) {
         onStepExpired={() => void settleTimeout()}
         autoLevels={watching ? autoLevels : undefined}
         autoRecord={watching ? autoRecord : undefined}
+        naturalLimit={naturalLimit}
       />
 
       <div className="board-holder">
@@ -172,6 +180,7 @@ export function PlayPage({ state }: { state: StateDto }) {
           onStepExpired={() => void settleTimeout()}
           autoLevels={watching ? autoLevels : undefined}
           autoRecord={watching ? autoRecord : undefined}
+          naturalLimit={naturalLimit}
         />
       )}
 

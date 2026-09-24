@@ -764,9 +764,14 @@ fn eval_predicate(ctx: &PredicateCtx<'_>, con: &ConstraintDef) -> bool {
             if between.len() != 1 {
                 return false;
             }
+            // ⚠️ **颜色必须一起判**。只判棋子种类的话，「对方那门炮/那匹马正好挡在
+            // 中间」也会算成立 —— 而名字里的 `own` 正是这个谓词的**全部意义**：
+            // 马后炮、重炮讲的就是「拿自己的子当炮架」。
+            //
+            // 这处漏判是用户报上来的：「俩炮都不是一个颜色的，就弹出重炮」。
             let screen = pos.piece_at(between[0]);
             match (con.kind.as_deref().and_then(parse_kind), kind_of(screen)) {
-                (Some(want), Some(actual)) => actual == want,
+                (Some(want), Some(actual)) => actual == want && color_of(screen) == Some(ctx.us),
                 _ => false,
             }
         }
@@ -839,18 +844,33 @@ fn eval_predicate(ctx: &PredicateCtx<'_>, con: &ConstraintDef) -> bool {
             else {
                 return false;
             };
+            // ⚠️ 只数**攻击者与将帅共处的那一条线**。
+            //
+            // 原来把「过攻击者的横线」和「过攻击者的竖线」**加起来**数，两个后果
+            // 让这个谓词彻底失效：
+            //   ① 攻击者自己同时在横线和竖线上，被数了两遍 —— 一门炮就凑够 min=2；
+            //   ② 与棋形毫无关系的那条垂直线上的棋子也被算进来。
+            // 重炮（`own_piece_count_on_line(cannon, min=2)`）正是靠这两条误报的。
+            let king = ctx.enemy_king();
+            let (kc, kr) = (col_of(king), row_of(king));
             let mut n = 0u32;
-            for c in 0..9u8 {
-                let piece = pos.piece_at(index(c, ctx.row()));
-                if color_of(piece) == Some(ctx.us) && kind_of(piece) == Some(kind) {
-                    n += 1;
+            if ctx.row() == kr {
+                for c in 0..9u8 {
+                    let piece = pos.piece_at(index(c, kr));
+                    if color_of(piece) == Some(ctx.us) && kind_of(piece) == Some(kind) {
+                        n += 1;
+                    }
                 }
-            }
-            for r in 0..10u8 {
-                let piece = pos.piece_at(index(ctx.col(), r));
-                if color_of(piece) == Some(ctx.us) && kind_of(piece) == Some(kind) {
-                    n += 1;
+            } else if ctx.col() == kc {
+                for r in 0..10u8 {
+                    let piece = pos.piece_at(index(kc, r));
+                    if color_of(piece) == Some(ctx.us) && kind_of(piece) == Some(kind) {
+                        n += 1;
+                    }
                 }
+            } else {
+                // 攻击者与将帅不共线，「这条线」不存在
+                return false;
             }
             n >= min as u32
         }
@@ -995,5 +1015,140 @@ fn eval_predicate(ctx: &PredicateCtx<'_>, con: &ConstraintDef) -> bool {
 
         // 未实现的谓词：保守返回 false（宁可漏判，不可误判）
         _ => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 造一次「红炮从 `from` 平到 `to`」的识别输入，返回命中的战术 id。
+    ///
+    /// 两个 FEN 必须只有那一枚炮的位置不同 —— 判定用的是走子**后**的局面，
+    /// 两份都给全才不会测出一个现实中不存在的局面。
+    fn red_cannon_move(before: &str, after: &str, from: &str, to: &str) -> Vec<String> {
+        let detector = TacticDetector::new(KnowledgeBase::embedded());
+        let pos_before = Position::from_fen(before).expect("测试用的 FEN 应当能解析");
+        let pos_after = Position::from_fen(after).expect("测试用的 FEN 应当能解析");
+        let ctx = MoveContext {
+            side: Color::Red,
+            mv: Move::new(
+                xq_core::from_iccs(from).expect("测试坐标应当合法"),
+                xq_core::from_iccs(to).expect("测试坐标应当合法"),
+            ),
+            nature: MoveNature::Check,
+            was_in_check: false,
+            captured: EMPTY,
+            score_best: 0,
+            score_loss: 0,
+        };
+        detector
+            .detect(&pos_before, &pos_after, &ctx)
+            .into_iter()
+            .map(|tag| tag.id)
+            .collect()
+    }
+
+    fn hits(ids: &[String], id: &str) -> bool {
+        ids.iter().any(|x| x == id)
+    }
+
+    /// **重炮不能拿对方的炮当炮架。**
+    ///
+    /// 这是用户报上来的场景：红炮平到 e 线，中间挡着的是**黑炮**，
+    /// 界面却弹出「重炮」。`has_own_piece_as_screen` 当时只判棋子种类、漏判颜色，
+    /// 而「自己的子」正是这个棋形的全部意义。
+    #[test]
+    fn double_cannon_needs_an_own_screen() {
+        let enemy_screen = red_cannon_move(
+            "4k4/9/4c4/9/9/9/3C5/9/9/4K4 w - - 0 1",
+            "4k4/9/4c4/9/9/9/4C4/9/9/4K4 b - - 0 1",
+            "d3",
+            "e3",
+        );
+        assert!(
+            !hits(&enemy_screen, "double_cannon_stack"),
+            "对方的炮当炮架不是重炮，实际命中：{enemy_screen:?}"
+        );
+    }
+
+    /// 反过来也要成立：**自家两门炮叠在同一条线上**才是重炮。
+    ///
+    /// 没有这一条，「把谓词删掉」也能让上面那个用例通过 —— 正例是防这个的。
+    #[test]
+    fn double_cannon_fires_with_own_stacked_cannons() {
+        let own_screen = red_cannon_move(
+            "4k4/9/4C4/9/9/9/3C5/9/9/4K4 w - - 0 1",
+            "4k4/9/4C4/9/9/9/4C4/9/9/4K4 b - - 0 1",
+            "d3",
+            "e3",
+        );
+        assert!(
+            hits(&own_screen, "double_cannon_stack"),
+            "自家双炮叠在 e 线上将军应当判重炮，实际命中：{own_screen:?}"
+        );
+    }
+
+    /// 马后炮同理：炮架必须是**自己的马**，对方的马挡在中间不算。
+    #[test]
+    fn horse_rear_cannon_needs_an_own_screen() {
+        let enemy_horse_screen = red_cannon_move(
+            "4k4/9/4n4/9/9/9/3C5/9/9/4K4 w - - 0 1",
+            "4k4/9/4n4/9/9/9/4C4/9/9/4K4 b - - 0 1",
+            "d3",
+            "e3",
+        );
+        assert!(
+            !hits(&enemy_horse_screen, "horse_rear_cannon"),
+            "对方的马当炮架不是马后炮，实际命中：{enemy_horse_screen:?}"
+        );
+
+        let own_horse_screen = red_cannon_move(
+            "4k4/9/4N4/9/9/9/3C5/9/9/4K4 w - - 0 1",
+            "4k4/9/4N4/9/9/9/4C4/9/9/4K4 b - - 0 1",
+            "d3",
+            "e3",
+        );
+        assert!(
+            hits(&own_horse_screen, "horse_rear_cannon"),
+            "自家马在将帅边上做炮架应当判马后炮，实际命中：{own_horse_screen:?}"
+        );
+    }
+
+    /// `own_piece_count_on_line` 只数**过攻击者与将帅的那一条线**。
+    ///
+    /// 直接测谓词、而不是绕道重炮那条棋形：修好「炮架必须是自己的子」之后，
+    /// 重炮的第三条约束（≥2 门自己的炮在线上）就恒成立了 —— 再绕道棋形，
+    /// 无论这个谓词写得对不对都测不出来。
+    #[test]
+    fn own_piece_count_on_line_counts_one_line_only() {
+        let con: ConstraintDef = serde_json::from_str(
+            r#"{"predicate":"own_piece_count_on_line","kind":"cannon","min":2}"#,
+        )
+        .expect("约束定义应当能解析");
+
+        // 攻击者固定在 e3，对方将帅在 e9 → 该数的是 e 线
+        let count = |fen: &str| {
+            let pos = Position::from_fen(fen).expect("测试 FEN 应当能解析");
+            let pctx = PredicateCtx {
+                pos_after: &pos,
+                to: xq_core::from_iccs("e3").expect("e3 是合法坐标"),
+                us: Color::Red,
+                enemy: Color::Black,
+                captured: EMPTY,
+            };
+            eval_predicate(&pctx, &con)
+        };
+
+        // 另一门炮在 a3（只在**过 e3 的横线**上，不在 e 线上）→ e 线上只有攻击者自己
+        assert!(
+            !count("4k4/9/9/9/9/9/C21C4/9/9/4K4 b - - 0 1"),
+            "横线上的炮不算同一条线；旧实现还会把攻击者数两遍凑够 2"
+        );
+        // e 线上真有两门自己的炮 → 成立（防「一律返回 false」也能过）
+        assert!(
+            count("4k4/9/9/9/4C4/9/4C4/9/9/4K4 b - - 0 1"),
+            "e 线上两门自己的炮应当数出 2"
+        );
     }
 }

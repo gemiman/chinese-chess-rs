@@ -1045,6 +1045,33 @@ async function main() {
     await sleep(300)
   }
 
+  console.log('\n[16] 钟条上显示自然限着的进度')
+  // 用「双人同机 + 不限时」来测：这样钟条左端**只有**限着这一项，
+  // 断言不用从一串「局时 · 步时 · 读秒」里挑，也不受时间档位影响。
+  await evaluate(client, `location.hash = '#/setup'`)
+  await waitFor(client, '.setup__start')
+  await clickButton(client, '[aria-label="对局模式"]', '双人同机')
+  await clickButton(client, '[aria-label="限时档位"]', '不限时')
+  await sleep(250)
+  check('开局（双人同机 · 不限时）', (await startGame(client)) === 'ok')
+
+  const limitText = () =>
+    evaluate(client, `document.querySelector('.clock__config')?.textContent.trim() ?? ''`)
+
+  const atStart = await limitText()
+  check('开局时是 0/60 回合', atStart.includes('限着 0/60 回合'), `实际「${atStart}」`)
+
+  // 走两个半步（都不吃子）→ 满一个回合
+  await playMove(client, 7, 2, 4, 2) // 炮二平五
+  await playMove(client, 7, 9, 6, 7) // 馬8进7
+  const afterTwo = await limitText()
+  check('两个半步之后记到 1/60 回合', afterTwo.includes('限着 1/60 回合'), `实际「${afterTwo}」`)
+
+  // 吃子要把计数清零 —— 这是这个计数存在的意义
+  await playMove(client, 4, 2, 4, 6) // 炮五进四，吃掉黑方中卒
+  const afterCapture = await limitText()
+  check('吃子之后计数清零', afterCapture.includes('限着 0/60 回合'), `实际「${afterCapture}」`)
+
   // 关掉自己建的标签页，不碰别的
   await fetch(`${CDP}/json/close/${client.targetId}`).catch(() => {})
   client.close()

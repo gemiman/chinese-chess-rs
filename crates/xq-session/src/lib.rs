@@ -37,7 +37,7 @@ use xq_ai::{AtomicStop, Difficulty, Engine, StopSignal};
 use xq_coach::{Coach, GameContext, Verbosity};
 use xq_core::piece::{color_of, kind_of};
 use xq_core::square::{BOARD_SIZE, col_of, row_of, to_iccs};
-use xq_core::{Color, GameStatus, Move, MoveNature, PieceKind, Position};
+use xq_core::{Color, GameStatus, Move, MoveNature, PieceKind, Position, SIXTY_MOVE_HALF_MOVES};
 
 /// 全局应用状态。本地单用户开发工具，只维护一局。
 pub struct AppState {
@@ -863,6 +863,7 @@ impl Game {
             cursor: self.cursor,
             halfmove_clock: self.pos.halfmove_clock(),
             fullmove_number: self.pos.fullmove_number(),
+            natural_limit_half_moves: SIXTY_MOVE_HALF_MOVES,
             clock: clock_dto,
         }
     }
@@ -939,6 +940,12 @@ pub struct StateDto {
     pub cursor: usize,
     pub halfmove_clock: u16,
     pub fullmove_number: u16,
+    /// 自然限着的阈值（**半步**数）：累计到这个数还没吃子就判和。
+    ///
+    /// 由 `xq-core` 给出、原样透传。前端要显示「离判和还差多少」就需要它 ——
+    /// 让前端自己写死 120 是不行的：规则一改，两边立刻不一致，而且**不会报错**，
+    /// 只是数字默默地对不上。
+    pub natural_limit_half_moves: u16,
     /// 棋钟。`null` 表示这一局不限时。
     pub clock: Option<ClockSnapshot>,
 }
@@ -1364,6 +1371,18 @@ mod tests {
         // 判过之后不会重复判，也走不了子
         assert!(game.settle_timeout().is_none());
         assert!(game.apply_iccs("h2", "e2").is_err(), "终局后不该允许落子");
+    }
+
+    /// 自然限着的阈值必须随 DTO 一起下发。
+    ///
+    /// 前端拿它显示「离判和还差多少」，而这条**不能**让前端自己写死 ——
+    /// 规则一改两边就对不上，而且不会报错，只是数字默默地对不上。
+    #[test]
+    fn dto_carries_the_natural_limit() {
+        let mut game = Game::new();
+        let dto = game.build_dto();
+        assert_eq!(dto.natural_limit_half_moves, SIXTY_MOVE_HALF_MOVES);
+        assert_eq!(dto.halfmove_clock, 0, "开局还没走过子");
     }
 
     /// 重开要把认输与复盘游标一并清掉 —— 否则新的一局开局就是「已认输」。
