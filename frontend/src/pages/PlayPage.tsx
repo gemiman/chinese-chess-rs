@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { Board } from '../components/Board'
 import { ClockBar } from '../components/ClockBar'
@@ -30,6 +30,28 @@ import type { StateDto } from '../types'
 /** 底部浮层。三件事共用一层，避免同时弹两个把棋盘挡没了。 */
 type Panel = 'none' | 'hint' | 'notation' | 'resign'
 
+/**
+ * 距下一局还有几秒。
+ *
+ * 自己每 250 毫秒跳一下就够了 —— 秒数**只是显示**，没必要为它往 store 里塞
+ * 一个每秒变一次的状态（那会让整棵订阅树每秒重渲染一次）。
+ * 存 `nextGameAt` 是时刻，暂停期间它不动，所以这里天然跟着停。
+ */
+function useCountdown(target: number | null): number | null {
+  const [left, setLeft] = useState<number | null>(null)
+  useEffect(() => {
+    if (target === null) {
+      setLeft(null)
+      return
+    }
+    const tick = () => setLeft(Math.max(0, Math.ceil((target - Date.now()) / 1000)))
+    tick()
+    const timer = window.setInterval(tick, 250)
+    return () => window.clearInterval(timer)
+  }, [target])
+  return left
+}
+
 export function PlayPage({ state }: { state: StateDto }) {
   const selected = useGameStore((s) => s.selected)
   const flipped = useGameStore((s) => s.flipped)
@@ -51,13 +73,22 @@ export function PlayPage({ state }: { state: StateDto }) {
   const toggleFlip = useGameStore((s) => s.toggleFlip)
   const requestHint = useGameStore((s) => s.requestHint)
   const clearHint = useGameStore((s) => s.clearHint)
+  const autoLevels = useGameStore((s) => s.autoLevels)
+  const autoRecord = useGameStore((s) => s.autoRecord)
+  const autoPlaying = useGameStore((s) => s.autoPlaying)
+  const nextGameAt = useGameStore((s) => s.nextGameAt)
+  const toggleAutoPlaying = useGameStore((s) => s.toggleAutoPlaying)
+  const stepOnce = useGameStore((s) => s.stepOnce)
 
   const [panel, setPanel] = useState<Panel>('none')
   const [text, setText] = useState('')
+  const secondsLeft = useCountdown(nextGameAt)
 
   const total = state.history.length
   const legalTargets = legalTargetsFrom(state, selected)
-  const myTurn = mode === 'hotseat' || state.side === playerColor
+  /** 机机对战里人是观众，两边都不归他管。 */
+  const watching = mode === 'auto'
+  const myTurn = !watching && (mode === 'hotseat' || state.side === playerColor)
 
   /**
    * 「复盘视图」= 对局已经结束。
@@ -78,6 +109,28 @@ export function PlayPage({ state }: { state: StateDto }) {
   // 让棋盘连「可走」的提示都不显示 —— 看着能走却点不动最让人困惑。
   const interactive = !ended && myTurn && !thinking && !busy
 
+  /** 按钮行右端那句状态。 */
+  const autoStatus = !autoPlaying
+    ? '已暂停'
+    : ended
+      ? secondsLeft === null
+        ? '准备下一局…'
+        : `${secondsLeft} 秒后开始下一局`
+      : thinking
+        ? '思考中…'
+        : '两个 AI 对局中'
+
+  /**
+   * 看分析 = **手动干预**，连播要先停下来。
+   *
+   * 不停的话，下一局会按倒计时自动开起来，把用户正在看的那盘棋换掉 ——
+   * 分析页读的就是 store 里那个局面，换了之后它会当场变成一盘空棋。
+   */
+  function openAnalysis() {
+    if (autoPlaying) toggleAutoPlaying()
+    navigate('analysis')
+  }
+
   return (
     <div className="play">
       <ClockBar
@@ -88,6 +141,8 @@ export function PlayPage({ state }: { state: StateDto }) {
         reviewing={ended}
         position="top"
         onStepExpired={() => void settleTimeout()}
+        autoLevels={watching ? autoLevels : undefined}
+        autoRecord={watching ? autoRecord : undefined}
       />
 
       <div className="board-holder">
@@ -115,11 +170,41 @@ export function PlayPage({ state }: { state: StateDto }) {
           reviewing={false}
           position="bottom"
           onStepExpired={() => void settleTimeout()}
+          autoLevels={watching ? autoLevels : undefined}
+          autoRecord={watching ? autoRecord : undefined}
         />
       )}
 
       <div className="play__bar">
-        {ended ? (
+        {watching ? (
+          // 机机对战：没有人需要悔棋、认输或求提示，这一行只留「控制播放」
+          <>
+            <button type="button" className="btn" onClick={toggleAutoPlaying}>
+              {autoPlaying ? '暂停' : ended ? '立即开始' : '继续'}
+            </button>
+            {ended ? (
+              // 终局后「单步」没有意义（这局已经下完了），换成「看分析」
+              <button type="button" className="btn" onClick={openAnalysis}>
+                看分析
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => void stepOnce()}
+                // 连播时按「单步」是自相矛盾的（它本来就在走），停一下再点才说得通
+                disabled={autoPlaying || thinking || busy}
+              >
+                单步
+              </button>
+            )}
+            <button type="button" className="btn" onClick={toggleFlip}>
+              翻转
+            </button>
+            <span className="play__spacer" />
+            <span className="play__mode">{autoStatus}</span>
+          </>
+        ) : ended ? (
           <>
             <button type="button" className="btn" onClick={toggleFlip}>
               翻转

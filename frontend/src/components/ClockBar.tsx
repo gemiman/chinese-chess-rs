@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 
-import type { ClockDto, Color } from '../types'
+import { DIFFICULTIES, type ClockDto, type Color, type DifficultyId } from '../types'
 
 /**
  * 对局时钟条。放在棋盘**上方**显示对手、**下方**显示自己 ——
@@ -81,6 +81,15 @@ interface ClockBarProps {
    * 只有**轮到走子**的那一条钟会调它，而且每条钟对同一份快照只调一次。
    */
   onStepExpired?: () => void
+  /**
+   * 机机对战时传进来：在侧名旁边标出这一方是哪个档位的 AI。
+   *
+   * 让 ClockBar 自己按 `shown` 取档位，而不是由外面算好颜色再传进来 ——
+   * 「上方是哪一方」的翻转规则只在这一个文件里，传颜色就等于把它复制到外面。
+   */
+  autoLevels?: Record<Color, DifficultyId>
+  /** 机机对战：这一方已经赢了几局（连播的累计战绩）。 */
+  autoRecord?: Record<Color, number>
 }
 
 export function ClockBar({
@@ -91,12 +100,19 @@ export function ClockBar({
   reviewing,
   position,
   onStepExpired,
+  autoLevels,
+  autoRecord,
 }: ClockBarProps) {
   const elapsed = useElapsed(clock)
 
   // 上方永远是「棋盘对面那一方」，与翻转保持一致
   const shown: Color = position === 'top' ? (flipped ? 'red' : 'black') : flipped ? 'black' : 'red'
   const label = shown === 'red' ? '红方' : '黑方'
+  const levelLabel =
+    autoLevels === undefined
+      ? null
+      : (DIFFICULTIES.find((d) => d.id === autoLevels[shown])?.label ?? null)
+  const wins = autoRecord === undefined ? null : autoRecord[shown]
 
   // ⚠️ `active` 与 `stepLeftMs` 必须在下面那个「不限时」提前 return **之前**算出来 ——
   // Hook 不能写在条件分支后面。不限时时步时用无穷大表示「永远不会归零」。
@@ -130,6 +146,7 @@ export function ClockBar({
     return (
       <div className={`clock clock--${position} clock--off${reviewing ? ' clock--reviewing' : ''}`}>
         <span className="clock__side clock__side--left">
+          {wins !== null ? <span className="clock__record">{wins} 胜</span> : null}
           {reviewing ? <span className="clock__config">复盘</span> : null}
         </span>
         <span className="clock__avatar">
@@ -146,7 +163,10 @@ export function ClockBar({
           <span className="clock__base">{reviewing ? '—' : '不限时'}</span>
         </span>
         <span className="clock__side clock__side--right">
-          <span className="clock__label">{label}</span>
+          <span className="clock__label">
+            {label}
+            {levelLabel !== null ? <span className="clock__level">{levelLabel}</span> : null}
+          </span>
         </span>
       </div>
     )
@@ -168,6 +188,7 @@ export function ClockBar({
       {/* 三列网格：左右各 1fr、中间 auto —— 圆盘才真正落在正中，
           不会被右边的文字顶偏。文字分列两侧，中间留白给头像。 */}
       <span className="clock__side clock__side--left">
+        {wins !== null ? <span className="clock__record">{wins} 胜</span> : null}
         <span className="clock__config">
           {reviewing ? (
             '复盘'
@@ -210,6 +231,7 @@ export function ClockBar({
       <span className="clock__side clock__side--right">
         <span className="clock__label">
           {label}
+          {levelLabel !== null ? <span className="clock__level">{levelLabel}</span> : null}
           {active ? <span className="clock__turn">走子中</span> : null}
         </span>
       </span>

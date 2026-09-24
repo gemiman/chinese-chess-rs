@@ -7,6 +7,7 @@ import {
   TIME_PRESETS,
   timePresetOf,
   type Color,
+  type DifficultyId,
   type GameMode,
 } from '../types'
 
@@ -28,16 +29,31 @@ import {
 
 const SIDE_LABEL: Record<string, string> = { red: '红方', black: '黑方' }
 
+/** 档位标识 → 中文名。查不到就原样返回，免得界面上出现一块空白。 */
+function levelName(id: DifficultyId): string {
+  return DIFFICULTIES.find((d) => d.id === id)?.label ?? id
+}
+
+/** 三种模式各一句话说明，直接摆在模式选择器下面 —— 光看按钮名字猜不出区别。 */
+const MODE_HINT: Record<GameMode, string> = {
+  hotseat: '两个人共用一块棋盘，轮流点棋子走。',
+  engine: '你和 Rust 引擎对下，轮流一步。',
+  auto: '两个 AI 互相对下，你只负责看。一局接一局自动往下打，不会自己停。',
+}
+
 export function SetupPage() {
   const mode = useGameStore((s) => s.mode)
   const playerColor = useGameStore((s) => s.playerColor)
   const difficulty = useGameStore((s) => s.difficulty)
+  const autoLevels = useGameStore((s) => s.autoLevels)
+  const autoLevelsChosen = useGameStore((s) => s.autoLevelsChosen)
   const timePreset = useGameStore((s) => s.timePreset)
   const moveSpeed = useGameStore((s) => s.moveSpeed)
   const busy = useGameStore((s) => s.busy)
   const setMode = useGameStore((s) => s.setMode)
   const setPlayerColor = useGameStore((s) => s.setPlayerColor)
   const setDifficulty = useGameStore((s) => s.setDifficulty)
+  const setAutoLevel = useGameStore((s) => s.setAutoLevel)
   const setTimePreset = useGameStore((s) => s.setTimePreset)
   const setMoveSpeed = useGameStore((s) => s.setMoveSpeed)
   const startGame = useGameStore((s) => s.startGame)
@@ -55,7 +71,7 @@ export function SetupPage() {
       <div className="setup__intro">
         <h2 className="setup__heading">开始一局新棋</h2>
         <p className="muted">
-          选好怎么下，按下面的「开始游戏」。这些设置**开局后不能改** ——
+          选好怎么下，按下面的「开始游戏」。这些设置<strong>开局后不能改</strong> ——
           想换一种下法，回来重开一局。
         </p>
       </div>
@@ -68,6 +84,7 @@ export function SetupPage() {
               [
                 { id: 'hotseat', label: '双人同机' },
                 { id: 'engine', label: '人机对战' },
+                { id: 'auto', label: '机机对战' },
               ] as { id: GameMode; label: string }[]
             ).map((item) => (
               <button
@@ -81,12 +98,64 @@ export function SetupPage() {
               </button>
             ))}
           </div>
-          <p className="muted setup__hint">
-            {mode === 'engine'
-              ? '你和 Rust 引擎对下，轮流一步。'
-              : '两个人共用一块棋盘，轮流点棋子走。'}
-          </p>
+          <p className="muted setup__hint">{MODE_HINT[mode]}</p>
         </section>
+
+        {mode === 'auto' ? (
+          <section className="card setup__card--wide">
+            <h3 className="card__title">两边棋力</h3>
+            <div className="setup__levels">
+              {(['red', 'black'] as Color[]).map((color) => (
+                <div key={color} className="setup__level">
+                  <span className="field__label">{SIDE_LABEL[color]}</span>
+                  <div
+                    className="segmented segmented--wrap"
+                    role="group"
+                    aria-label={`${SIDE_LABEL[color]}棋力`}
+                  >
+                    {DIFFICULTIES.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`segmented__item${
+                          autoLevelsChosen[color] && autoLevels[color] === item.id
+                            ? ' segmented__item--active'
+                            : ''
+                        }`}
+                        aria-pressed={autoLevelsChosen[color] && autoLevels[color] === item.id}
+                        title={`${item.label} · ${item.subtitle}`}
+                        onClick={() => setAutoLevel(color, item.id)}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className={`segmented__item${
+                        autoLevelsChosen[color] ? '' : ' segmented__item--active'
+                      }`}
+                      aria-pressed={!autoLevelsChosen[color]}
+                      title="每开一局都重新随机"
+                      onClick={() => setAutoLevel(color, null)}
+                    >
+                      随机
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="muted setup__hint">
+              两个 AI 不停歇地轮流对下：一局完了隔 20 秒自动开下一局，两条钟上记着各自的胜场。
+              没手动选的档位<strong>每局重摇</strong>，所以会看到各种对阵组合。
+            </p>
+            <p className="muted setup__hint">
+              本局：红方 <strong>{levelName(autoLevels.red)}</strong>
+              {autoLevelsChosen.red ? '（已固定）' : '（随机）'} · 黑方{' '}
+              <strong>{levelName(autoLevels.black)}</strong>
+              {autoLevelsChosen.black ? '（已固定）' : '（随机）'}
+            </p>
+          </section>
+        ) : null}
 
         {mode === 'engine' ? (
           <section className="card">
@@ -106,9 +175,7 @@ export function SetupPage() {
                 </button>
               ))}
             </div>
-            <p className="muted setup__hint">
-              执黑时棋盘会翻转过来，你的棋始终在下方。
-            </p>
+            <p className="muted setup__hint">执黑时棋盘会翻转过来，你的棋始终在下方。</p>
           </section>
         ) : null}
 

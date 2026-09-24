@@ -336,6 +336,25 @@ body {
   color: var(--coach-good);
 }
 
+/* 机机对战：在侧名旁边标出这一方是哪个档位的 AI。
+   描边样式而不是实心底 —— 它是说明，不该跟「走子中」那个高亮标记抢眼。 */
+.clock__level {
+  padding: 1px 7px;
+  border: 1px solid var(--ui-border);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--ui-text-2);
+}
+
+/* 机机对战：这一方在连播里赢了几局。放在钟条左端（那本来是参数说明的位置）。 */
+.clock__record {
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ui-text-2);
+}
+
 .clock__config {
   font-size: 11.5px;
   color: var(--ui-text-3);
@@ -1465,6 +1484,26 @@ body {
   text-align: center;
 }
 
+/* 机机对战的两边档位：一行一方，标签在左、选择器在右。
+   标签定宽是为了两行的选择器左边缘对齐 —— 不定宽的话「红方」「黑方」两个
+   词宽度一样看不出来，一旦以后换成别的词就会错开。 */
+.setup__levels {
+  display: grid;
+  gap: 10px;
+}
+
+.setup__level {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.setup__level .field__label {
+  flex: none;
+  width: 40px;
+}
+
 /* ------------------------------------------------------------ 按钮变体 */
 
 .btn--primary {
@@ -1528,6 +1567,32 @@ body {
 
 .play__spacer {
   flex: 1;
+}
+
+/* 机机对战：按钮行右端的播放状态（两个 AI 对局中 / 已暂停 / 思考中） */
+.play__mode {
+  flex: none;
+  font-size: 12px;
+  color: var(--ui-text-3);
+  white-space: nowrap;
+}
+
+/* 机机对战：按钮行右端的播放状态（对局中 / 已暂停 / 思考中） */
+.play__mode {
+  flex: none;
+  font-size: 12px;
+  color: var(--ui-text-3);
+  white-space: nowrap;
+}
+
+/* 机机对战：在侧名旁边标出这一方是哪个档位的 AI */
+.clock__level {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--ui-border);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--ui-text-2);
 }
 
 /* 复盘：两条钟都不再走秒，视觉上也要退到背景里去 */

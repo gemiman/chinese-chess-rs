@@ -6,6 +6,7 @@ import { SetupPage } from './pages/SetupPage'
 import { runningInTauri } from './bridge'
 import { navigate, useRoute, type Route } from './router'
 import { useGameStore } from './store'
+import { AUTO_PACE_MS } from './types'
 
 /**
  * 应用外壳：决定显示哪一页，以及两个「自动跳转」。
@@ -31,6 +32,7 @@ export default function App() {
   const thinking = useGameStore((s) => s.thinking)
   const mode = useGameStore((s) => s.mode)
   const playerColor = useGameStore((s) => s.playerColor)
+  const autoPlaying = useGameStore((s) => s.autoPlaying)
   const load = useGameStore((s) => s.load)
   const enginePlay = useGameStore((s) => s.enginePlay)
   const dismissError = useGameStore((s) => s.dismissError)
@@ -41,6 +43,27 @@ export default function App() {
   useEffect(() => {
     void load()
   }, [load])
+
+  // 机机对战：两步之间的最小间隔。
+  //
+  // ⚠️ 这件事只能在这里做，**不能改成「让引擎多想一会儿」**。实测：入门档只想
+  // 2 层，给它 3000 毫秒预算，它 0 毫秒就算完返回了 —— 弱档位的设计就是「算完
+  // 即走」，时间预算对它没有约束力（中级 169 毫秒，只有大师真用满）。所以想让棋
+  // 别从眼前飞过去，只能在**节奏**上加下限。
+  //
+  // ⚠️ 这段必须**排在下面那个自动应招的 effect 前面**。副作用按声明顺序执行，
+  // 下面的 effect 要读这里刚写下的 `lastMoveAt`；调换顺序的话它读到的永远是上一手
+  // 的时间戳，间隔会莫名其妙地少一拍 —— 而且不报任何错。
+  const lastMoveAt = useRef(0)
+  const prevSteps = useRef<number | null>(null)
+  const steps = state?.history.length ?? 0
+  useEffect(() => {
+    const prev = prevSteps.current
+    prevSteps.current = steps
+    // 首次挂载不算；步数变少说明换了一局（或悔棋），基准清零让第一步立刻走
+    if (prev === null) return
+    lastMoveAt.current = steps > prev ? Date.now() : 0
+  }, [steps])
 
   // 轮到引擎时自动走一步。
   //
@@ -54,20 +77,74 @@ export default function App() {
     // 一次、还可能中途报错。这个 bug 是桌面端冒烟测试抓出来的：它表现为
     // 「开局之后引擎一动不动」，因为真正的引擎调用早就浪费在设置页上了。
     if (page !== 'play') return
-    if (mode !== 'engine' || state === null || state.status.over || thinking) return
+    if (state === null || state.status.over || thinking) return
     // 复盘时盘面停在过去，此刻的「走子方」是历史，不是轮到谁走
     if (state.cursor !== state.history.length) return
-    if (state.side === playerColor) return
-    void enginePlay()
-  }, [page, mode, state, playerColor, thinking, enginePlay])
 
-  // 终局 → 分析页。注意只能认「刚才还不是终局」这一个瞬间。
+    if (mode === 'auto') {
+      // 机机对战：暂停时两个 AI 都停手。
+      // 「单步」不走这里 —— 它自己叫一次 `enginePlay`，且会先把连播关掉。
+      if (!autoPlaying) return
+      const wait = AUTO_PACE_MS - (Date.now() - lastMoveAt.current)
+      if (wait > 0) {
+        // 用定时器等剩下的时间，而不是在 store 里 sleep ——
+        // 这样用户中途按暂停，cleanup 能立刻把这一步取消掉
+        const timer = window.setTimeout(() => void enginePlay(), wait)
+        return () => window.clearTimeout(timer)
+      }
+    } else if (mode === 'engine') {
+      // 人机对战：只在轮到引擎那一方时替它走
+      if (state.side === playerColor) return
+    } else {
+      // 双人同机：没有引擎的事
+      return
+    }
+
+    void enginePlay()
+  }, [page, mode, autoPlaying, state, playerColor, thinking, enginePlay])
+
+  // 终局要分两种走法：普通模式跳到分析页，机机对战**留在原地开下一局**。
+  // 两者都只能认「刚才还不是终局」这一个瞬间。
   const over = state?.status.over ?? false
   const wasOver = useRef(false)
+  const finishAutoGame = useGameStore((s) => s.finishAutoGame)
   useEffect(() => {
-    if (over && !wasOver.current) navigate('analysis')
+    const justEnded = over && !wasOver.current
     wasOver.current = over
-  }, [over])
+    if (!justEnded) return
+    if (mode === 'auto') {
+      // 机机对战是**连播**的：跳走就等于停下来，与「别停」冲突。
+      // 所以留在这儿记一笔战绩，倒计时结束后自动开下一局。
+      finishAutoGame()
+    } else {
+      navigate('analysis')
+    }
+  }, [over, mode, finishAutoGame])
+
+  // 机机对战：终局且还在连播 → 排下一局（20 秒后）。
+  // 单独一段是因为「暂停后按继续」也要能重新排上，而不只是终局那一刻。
+  const nextGameAt = useGameStore((s) => s.nextGameAt)
+  const armNextGame = useGameStore((s) => s.armNextGame)
+  useEffect(() => {
+    if (page !== 'play' || mode !== 'auto' || !autoPlaying || !over) return
+    if (nextGameAt !== null) return
+    armNextGame()
+  }, [page, mode, autoPlaying, over, nextGameAt, armNextGame])
+
+  // 到点了就开下一局。
+  // 存的是**时刻**而不是倒计时秒数，所以暂停期间它自然地停住（这段 effect 被
+  // cleanup 掉了），继续的时候按剩下的时间接着算。
+  const startNextGame = useGameStore((s) => s.startNextGame)
+  useEffect(() => {
+    if (page !== 'play' || mode !== 'auto' || !autoPlaying || nextGameAt === null) return
+    const remaining = nextGameAt - Date.now()
+    if (remaining <= 0) {
+      void startNextGame()
+      return
+    }
+    const timer = window.setTimeout(() => void startNextGame(), remaining)
+    return () => window.clearTimeout(timer)
+  }, [page, mode, autoPlaying, nextGameAt, startNextGame])
 
   // 没有对局却停在需要局面的页面上（刷新、或手改网址、或桌面端恢复了上次的深链）
   // → 送回设置页。

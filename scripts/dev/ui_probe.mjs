@@ -798,6 +798,253 @@ async function main() {
     check('终局原因是超时判负', text.includes('超时'), `实际「${text}」`)
   }
 
+  console.log('\n[12] 机机对战：两个 AI 自己走，能暂停、能单步')
+  await evaluate(client, `location.hash = '#/setup'`)
+  await waitFor(client, '.setup__start')
+  check('模式里有「机机对战」', (await clickButton(client, '[aria-label="对局模式"]', '机机对战')) === 'ok')
+  await sleep(250)
+
+  const levelConfig = await evaluate(
+    client,
+    `({
+      red: !!document.querySelector('[aria-label="红方棋力"]'),
+      black: !!document.querySelector('[aria-label="黑方棋力"]'),
+      noSide: !document.querySelector('[aria-label="我执哪一方"]'),
+    })`,
+  )
+  check('两边棋力可以分别选', levelConfig.red && levelConfig.black)
+  check('不再问「我执哪一方」（那是人机对战才有的）', levelConfig.noSide)
+
+  // 挑两个快档位，这一段的等待才不至于太长
+  await clickButton(client, '[aria-label="红方棋力"]', '入门')
+  await clickButton(client, '[aria-label="黑方棋力"]', '初级')
+  await sleep(200)
+  check('开局', (await startGame(client)) === 'ok')
+
+  const autoView = await evaluate(
+    client,
+    `({
+      buttons: [...document.querySelectorAll('.play__bar .btn')].map((b) => b.textContent.trim()),
+      levels: [...document.querySelectorAll('.clock__level')].map((e) => e.textContent.trim()),
+      locked: !!document.querySelector('.board--locked'),
+    })`,
+  )
+  check(
+    '按钮换成 暂停 / 单步 / 翻转',
+    autoView.buttons.join('/') === '暂停/单步/翻转',
+    `实际 ${autoView.buttons.join('/')}`,
+  )
+  check(
+    '两条钟各自标出了是哪一档 AI',
+    autoView.levels.length === 2,
+    `实际 ${autoView.levels.join(' / ') || '(无)'}`,
+  )
+  check('机机对战里棋盘是只读的（人是观众）', autoView.locked === true)
+
+  let autoMoves = 0
+  for (let i = 0; i < 60; i += 1) {
+    autoMoves = (await apiState()).history.length
+    if (autoMoves >= 3) break
+    await sleep(300)
+  }
+  check('两个 AI 自己走出了至少 3 手', autoMoves >= 3, `实际 ${autoMoves} 手`)
+
+  await clickButton(client, '.play__bar', '暂停')
+  // ⚠️ 暂停**不会打断已经在飞的那一手** —— 引擎已经算起来了，拦不住，
+  // 它落地之后才真正停下来。所以基准要在它落地之后再取，否则会把
+  // 「这一手正常落子」误判成「暂停没生效」。这个坑第一版就踩了。
+  let settled = null
+  for (let i = 0; i < 40; i += 1) {
+    const a = (await apiState()).history.length
+    await sleep(600)
+    const b = (await apiState()).history.length
+    if (a === b) {
+      settled = a
+      break
+    }
+  }
+  check('暂停后局面稳定下来', settled !== null)
+
+  const pausedText = await evaluate(
+    client,
+    `document.querySelector('.play__mode')?.textContent ?? ''`,
+  )
+  check('状态变成「已暂停」', pausedText.includes('已暂停'), `实际「${pausedText}」`)
+
+  const beforePause = settled ?? (await apiState()).history.length
+  await sleep(4_000)
+  const afterPause = (await apiState()).history.length
+  check('暂停期间两个 AI 都停手', afterPause === beforePause, `${beforePause} → ${afterPause}`)
+
+  // 单步：等按钮解禁（暂停那一刻可能还有一手在飞）再点
+  let stepClicked = 'disabled'
+  for (let i = 0; i < 40 && stepClicked === 'disabled'; i += 1) {
+    stepClicked = await clickButton(client, '.play__bar', '单步')
+    if (stepClicked === 'disabled') await sleep(200)
+  }
+  check('单步按钮解禁并可点', stepClicked === 'ok', String(stepClicked))
+
+  let stepped = beforePause
+  for (let i = 0; i < 40; i += 1) {
+    stepped = (await apiState()).history.length
+    if (stepped > beforePause) break
+    await sleep(200)
+  }
+  check('单步恰好走了一手', stepped === beforePause + 1, `${beforePause} → ${stepped}`)
+  await sleep(2_500)
+  check(
+    '单步之后仍然停着（没有溜回连播）',
+    (await apiState()).history.length === stepped,
+    `实际 ${(await apiState()).history.length} 手`,
+  )
+
+  console.log('\n[13] 机机对战：档位默认随机、选了就固定、再点「随机」交还随机')
+  // 刷新一下再验「默认」—— 前面的段落已经把两边的档位选死了，
+  // 不重置的话看到的不是出厂默认，而是上一段留下的残局（第一版就踩了这个）。
+  await client.send('Page.reload', {})
+  await waitFor(client, '.setup__start')
+  await clickButton(client, '[aria-label="对局模式"]', '机机对战')
+  await sleep(400)
+
+  const rolled = await evaluate(
+    client,
+    `({
+      red: document.querySelector('[aria-label="红方棋力"] button[aria-pressed="true"]')?.textContent.trim(),
+      black: document.querySelector('[aria-label="黑方棋力"] button[aria-pressed="true"]')?.textContent.trim(),
+      hint: [...document.querySelectorAll('.setup__hint')].map((p) => p.textContent.trim()).find((t) => t.startsWith('本局')),
+    })`,
+  )
+  check('两边默认都是「随机」', rolled.red === '随机' && rolled.black === '随机', `${rolled.red} / ${rolled.black}`)
+  check(
+    '页面上说清了本局实际用哪两档',
+    /红方\s*\S+（随机）/.test(rolled.hint ?? ''),
+    `实际「${rolled.hint}」`,
+  )
+
+  await clickButton(client, '[aria-label="红方棋力"]', '大师')
+  await sleep(200)
+  const picked = await evaluate(
+    client,
+    `({
+      red: document.querySelector('[aria-label="红方棋力"] button[aria-pressed="true"]')?.textContent.trim(),
+      black: document.querySelector('[aria-label="黑方棋力"] button[aria-pressed="true"]')?.textContent.trim(),
+    })`,
+  )
+  check('手动选过的一方不再是「随机」', picked.red === '大师', `实际「${picked.red}」`)
+  check('没动过的那一方还是「随机」', picked.black === '随机', `实际「${picked.black}」`)
+
+  await clickButton(client, '[aria-label="红方棋力"]', '随机')
+  await sleep(200)
+  const backToRandom = await evaluate(
+    client,
+    `document.querySelector('[aria-label="红方棋力"] button[aria-pressed="true"]')?.textContent.trim()`,
+  )
+  check('再点「随机」就把这一方交还给随机', backToRandom === '随机', `实际「${backToRandom}」`)
+
+  console.log('\n[14] 机机对战：两次落子之间至少隔 3 秒')
+  // ⚠️ 这条测的是**节奏**，不是「让引擎多想」。实测入门档只想 2 层、
+  // 给它 3000 毫秒预算它 0 毫秒就返回了 —— 弱档位对时间预算免疫，
+  // 所以「每步至少 3 秒」只能靠走子节奏的下限来保证。
+  await clickButton(client, '[aria-label="红方棋力"]', '入门')
+  await clickButton(client, '[aria-label="黑方棋力"]', '入门')
+  await sleep(200)
+  check('开局', (await startGame(client)) === 'ok')
+
+  const stamps = []
+  let seen = null
+  for (let i = 0; i < 320 && stamps.length < 4; i += 1) {
+    const n = (await apiState()).history.length
+    if (seen !== null && n !== seen) stamps.push(Date.now())
+    seen = n
+    await sleep(60)
+  }
+  check('观察到至少 3 次落子', stamps.length >= 3, `实际 ${stamps.length} 次`)
+  if (stamps.length >= 3) {
+    const gaps = stamps.slice(1).map((t, i) => (t - stamps[i]) / 1000)
+    const min = Math.min(...gaps)
+    console.log(`  （相邻两手间隔：${gaps.map((g) => g.toFixed(2)).join(' / ')} 秒）`)
+    // 采样本身有 60 毫秒粒度，测出来的间隔只会偏短，所以门槛留一点余量
+    check('最小间隔不低于 3 秒', min >= 2.9, `最小 ${min.toFixed(2)} 秒`)
+  }
+
+  console.log('\n[15] 机机对战：一局完了不跳分析页，倒计时后自动开下一局')
+  // 这是整个脚本里最慢的一段（要等一局真下完，一两分钟），
+  // 但它是「连续对局」这个功能的唯一端到端覆盖 —— 没有别的办法能验它。
+  await clickButton(client, '.play__bar', '暂停')
+  await sleep(300)
+  await evaluate(client, `location.hash = '#/setup'`)
+  await waitFor(client, '.setup__start')
+  await clickButton(client, '[aria-label="红方棋力"]', '入门')
+  await clickButton(client, '[aria-label="黑方棋力"]', '初级')
+  await sleep(200)
+  check('开局（入门 vs 初级，这一局结束得快）', (await startGame(client)) === 'ok')
+
+  const recordBefore = await evaluate(
+    client,
+    `document.querySelector('.clock__record')?.textContent ?? ''`,
+  )
+  check('钟条上先记着 0 胜', recordBefore.includes('0 胜'), `实际「${recordBefore}」`)
+
+  let endMoves = 0
+  let finished = false
+  // 预算给到 5 分钟。这不是「慢」而是**没法预测**：AI 对局多长取决于两边怎么走，
+  // 实测同一对档位下既有 10 手就分出胜负的，也有走了几十手还在缠斗的。
+  // 六回合自然限着能保证它一定会结束，但那个上限是 120 手（约 6 分钟），
+  // 卡太紧会变成一个时灵时不灵的用例 —— 那种用例比没有还糟。
+  for (let i = 0; i < 600; i += 1) {
+    const s = await apiState()
+    if (s.status.over) {
+      endMoves = s.history.length
+      finished = true
+      break
+    }
+    await sleep(500)
+  }
+  check('五分钟内下完一局', finished, '还没下完，后面几条验不了')
+
+  if (finished) {
+    // 让「终局 → 记战绩 → 排下一局」这几个 effect 跑完再读界面，
+    // 否则可能读到还没更新的那一帧，把一个正常的时序误判成缺陷
+    await sleep(800)
+    const gapView = await evaluate(
+      client,
+      `({
+        hash: location.hash,
+        countdown: document.querySelector('.play__mode')?.textContent ?? '',
+        record: document.querySelector('.clock__record')?.textContent ?? '',
+        buttons: [...document.querySelectorAll('.play__bar .btn')].map((b) => b.textContent.trim()),
+      })`,
+    )
+    check('留在对局页，没有跳去分析页', gapView.hash === '#/play', `实际 ${gapView.hash}`)
+    check(
+      '倒计时说清了多久后开下一局',
+      /秒后开始下一局/.test(gapView.countdown),
+      `实际「${gapView.countdown}」`,
+    )
+    check('战绩加了一笔', /[1-9]\d* 胜/.test(gapView.record), `实际「${gapView.record}」`)
+    check(
+      '终局后「单步」换成「看分析」',
+      gapView.buttons.includes('看分析') && !gapView.buttons.includes('单步'),
+      `实际 ${gapView.buttons.join('/')}`,
+    )
+
+    // 等它自己开下一局
+    let restarted = false
+    for (let i = 0; i < 90; i += 1) {
+      const s = await apiState()
+      if (!s.status.over && s.history.length < endMoves) {
+        restarted = true
+        break
+      }
+      await sleep(500)
+    }
+    check('倒计时结束后自动开了下一局', restarted, `局面一直停在 ${endMoves} 手`)
+
+    // 停下来，别把连播留给收尾
+    await clickButton(client, '.play__bar', '暂停')
+    await sleep(300)
+  }
+
   // 关掉自己建的标签页，不碰别的
   await fetch(`${CDP}/json/close/${client.targetId}`).catch(() => {})
   client.close()

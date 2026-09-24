@@ -13,8 +13,10 @@ import { create } from 'zustand'
 
 import { bridge } from './bridge'
 import {
+  AUTO_GAP_MS,
   DEEP_LEVEL,
   DEEP_THINK_MS,
+  DIFFICULTIES,
   THINK_MS,
   type CoachNote,
   type Color,
@@ -51,6 +53,41 @@ const deepDone = new Set<number>()
 /** 「正在结算超时」的同步守卫。见 `settleTimeout`。 */
 let settlingTimeout = false
 
+/**
+ * 「正在开下一局」的同步守卫。
+ *
+ * 与 `engineInFlight` 同一个理由：StrictMode 会把副作用跑两遍，而 `startNextGame`
+ * 是异步的 —— 两次调用会**连着开两局**（第二局把刚开的那个覆盖掉）。
+ * 界面上看不出报错，只觉得「怎么闪了一下又是新棋」。
+ */
+let startingNext = false
+
+/** 机机对战的累计战绩。 */
+export interface AutoRecord {
+  red: number
+  black: number
+  draw: number
+}
+
+const EMPTY_RECORD: AutoRecord = { red: 0, black: 0, draw: 0 }
+
+/**
+ * 给双方各摇一档。只摇**没被手动选过**的那一方。
+ *
+ * 「各自随机」是分开摇的，不是摇一次给两边用 —— 那样只会出现「同档对同档」，
+ * 看不到大师打入门这种最有意思的对局。
+ */
+function rollAutoLevels(
+  current: Record<Color, DifficultyId>,
+  chosen: Record<Color, boolean>,
+): Record<Color, DifficultyId> {
+  const pick = () => DIFFICULTIES[Math.floor(Math.random() * DIFFICULTIES.length)].id
+  return {
+    red: chosen.red ? current.red : pick(),
+    black: chosen.black ? current.black : pick(),
+  }
+}
+
 /** 深度分析的初始进度。 */
 const IDLE_DEEP: DeepProgress = { running: false, done: 0, total: 0, error: null }
 
@@ -85,6 +122,21 @@ function saveSpeed(speed: MoveSpeed): void {
   } catch {
     // 同上
   }
+}
+
+/**
+ * 这一手该用哪个档位。
+ *
+ * 机机对战两边各有一档（能看「大师 vs 入门」这种让子局）；人机对战只有玩家
+ * 对面那一侧会用到引擎，两处共用一个档位。
+ */
+function levelForSide(
+  mode: GameMode,
+  side: Color,
+  difficulty: DifficultyId,
+  autoLevels: Record<Color, DifficultyId>,
+): DifficultyId {
+  return mode === 'auto' ? autoLevels[side] : difficulty
 }
 
 /** 限时档位的本地存储键。 */
@@ -153,12 +205,38 @@ interface GameStore {
   /** 限时档位（记在 localStorage 里）。开局时下发给 Rust。 */
   timePreset: TimePresetId
 
-  /** 对局模式：双人热座 / 人机对战。 */
+  /** 对局模式：双人同机 / 人机对战 / 机机对战。 */
   mode: GameMode
   /** 人机模式下玩家执哪一方。 */
   playerColor: Color
   /** 人机模式下的引擎档位。 */
   difficulty: DifficultyId
+  /** 机机对战两边的档位，红黑各自一档。 */
+  autoLevels: Record<Color, DifficultyId>
+  /**
+   * 机机对战：哪几方的档位是**手动选过**的。
+   *
+   * 没选过的一方每开一局都重摇 —— 「各自随机」是按方计的，
+   * 只手动定了一边时，另一边照样每局换人。
+   */
+  autoLevelsChosen: Record<Color, boolean>
+  /**
+   * 机机对战是否连播。
+   *
+   * 暂停时两个 AI 都停手、棋盘只读；点「单步」让当前该走的那一方走一步。
+   * 看 AI 对局时这一步很要紧 —— 一步两三秒，看到关键处总得能停下来想想。
+   */
+  autoPlaying: boolean
+  /**
+   * 机机对战：下一局的开始时刻（毫秒时间戳）；`null` = 没排下一局。
+   *
+   * 存**时刻**而不是「还剩几秒」：秒数要有人每秒去改它，而时刻是死的，
+   * 谁需要谁拿 `Date.now()` 减一下就行。暂停期间它不动，继续的时候接着算，
+   * 语义天然正确。
+   */
+  nextGameAt: number | null
+  /** 机机对战的累计战绩（这一轮连播里红方赢了几局、黑方赢了几局、和了几局）。 */
+  autoRecord: AutoRecord
   /** 引擎是否正在思考。 */
   thinking: boolean
   /** 最近一次引擎搜索的元信息。 */
@@ -208,6 +286,26 @@ interface GameStore {
   setMode: (mode: GameMode) => void
   setPlayerColor: (color: Color) => void
   setDifficulty: (level: DifficultyId) => void
+  /**
+   * 设置机机对战某一方的档位。传 `null` 表示「随机」——
+   * 该方从此每局重摇，不再固定。
+   */
+  setAutoLevel: (color: Color, level: DifficultyId | null) => void
+  /** 机机对战：暂停 / 继续。终局时「继续」= 立刻开下一局。 */
+  toggleAutoPlaying: () => void
+  /**
+   * 机机对战：只走一步。
+   *
+   * 顺带把连播关掉 —— 不关的话走完这一步副作用会立刻接着走下一步，
+   * 「单步」就等于没按。
+   */
+  stepOnce: () => Promise<void>
+  /** 机机对战：排下一局（设置 `nextGameAt`）。 */
+  armNextGame: () => void
+  /** 机机对战：立刻开下一局（跳过倒计时）。 */
+  startNextGame: () => Promise<void>
+  /** 机机对战：一局分出结果了，记一笔战绩。 */
+  finishAutoGame: () => void
   /** 让引擎走一步（由 App 的副作用在轮到引擎时调用）。 */
   enginePlay: () => Promise<void>
   /** 请求走棋提示。 */
@@ -267,6 +365,42 @@ export const useGameStore = create<GameStore>((set, get) => {
     }
   }
 
+  /**
+   * 开一局新的。
+   *
+   * `fresh` 表示这一局是**从设置页手动开的**（相对于连播里自动接上的下一局）：
+   * 手动开局会把连播战绩清零，自动接局则继续累加 —— 不然「连看几十局」记到
+   * 第二局就被清了，等于没记。
+   */
+  async function beginGame(fresh: boolean): Promise<void> {
+    set({ nextGameAt: null })
+    await run(
+      // 限时在这一步下发：开局时把当前档位带给 Rust，由它建钟并开始走秒
+      () => bridge.newGame(undefined, timePresetOf(get().timePreset).control),
+      (r) => r.state,
+    )
+    if (get().error !== null) {
+      // 开局都没开成（引擎连不上）就别接着排下一局，否则会一直空转
+      set({ autoPlaying: false })
+      return
+    }
+
+    const { mode, autoLevels, autoLevelsChosen } = get()
+    set({
+      started: true,
+      autoPlaying: true,
+      notes: {},
+      deep: IDLE_DEEP,
+      engineInfo: null,
+      hints: [],
+      hintInfo: null,
+      // 没手动选过的一方，每局重摇 —— 连着看几十局才有变化
+      autoLevels: mode === 'auto' ? rollAutoLevels(autoLevels, autoLevelsChosen) : autoLevels,
+      ...(fresh ? { autoRecord: EMPTY_RECORD } : {}),
+    })
+    get().clearCoach()
+  }
+
   return {
     state: null,
     started: false,
@@ -280,6 +414,12 @@ export const useGameStore = create<GameStore>((set, get) => {
     mode: 'hotseat',
     playerColor: 'red',
     difficulty: 'l3',
+    // 两边同档起步；只要没手动选过，每开一局都会重摇
+    autoLevels: { red: 'l3', black: 'l3' },
+    autoLevelsChosen: { red: false, black: false },
+    autoPlaying: true,
+    nextGameAt: null,
+    autoRecord: EMPTY_RECORD,
     thinking: false,
     engineInfo: null,
     hints: [],
@@ -305,6 +445,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       // 复盘期间不能落子。Rust 侧也会拒，但拦在这里能省一次往返，
       // 也不会弹一个「正在复盘」的错误提示吓人。
       if (isReviewing(state)) return
+      // 机机对战里人是观众，两边都不该被插手
+      if (mode === 'auto') return
       // 人机模式下不允许替引擎走棋
       if (mode === 'engine' && state.side !== playerColor) return
 
@@ -338,7 +480,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     playText: async (text) => {
       if (text.trim().length === 0) return
       const { state, mode, playerColor } = get()
-      if (!state || isReviewing(state)) return
+      if (!state || isReviewing(state) || mode === 'auto') return
       if (mode === 'engine' && state.side !== playerColor) return
       set({ hints: [], hintInfo: null })
       await run(
@@ -351,6 +493,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     playMove: async (from, to) => {
       const { state, mode, playerColor, thinking } = get()
       if (!state || state.status.over || thinking || isReviewing(state)) return
+      if (mode === 'auto') return
       if (mode === 'engine' && state.side !== playerColor) return
       set({ hints: [], hintInfo: null })
       await run(
@@ -365,10 +508,10 @@ export const useGameStore = create<GameStore>((set, get) => {
       const before = state?.history.length ?? 0
       await run(
         async () => {
-          // 人机模式：连退两步，让局面回到「玩家该走」的状态。
-          // 只退一步的话，玩家一悔棋引擎立刻又走回去，看起来像悔棋没生效。
+          // 一边是引擎时要连退两步，让局面回到「同一方该走」的状态。
+          // 只退一步的话，那一方立刻又走回去，看起来像悔棋没生效。
           let result = await bridge.undo()
-          if (mode === 'engine' && result.ok) {
+          if (mode !== 'hotseat' && result.ok) {
             result = await bridge.undo()
           }
           return result
@@ -394,20 +537,37 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     startGame: async () => {
       deepDone.clear()
-      await run(
-        // 限时在这一步下发：开局时把当前档位带给 Rust，由它建钟并开始走秒
-        () => bridge.newGame(undefined, timePresetOf(get().timePreset).control),
-        (r) => r.state,
-      )
+      await beginGame(true)
+    },
+
+    startNextGame: async () => {
+      if (startingNext) return
+      startingNext = true
+      try {
+        deepDone.clear()
+        await beginGame(false)
+      } finally {
+        startingNext = false
+      }
+    },
+
+    armNextGame: () => {
+      if (get().mode !== 'auto') return
+      set({ nextGameAt: Date.now() + AUTO_GAP_MS })
+    },
+
+    finishAutoGame: () => {
+      const { state, autoRecord, mode } = get()
+      if (mode !== 'auto' || state === null) return
+      // 负方是谁 → 另一方赢；没有负方就是和棋
+      const loser = state.status.loser
       set({
-        started: true,
-        notes: {},
-        deep: IDLE_DEEP,
-        engineInfo: null,
-        hints: [],
-        hintInfo: null,
+        autoRecord: {
+          red: autoRecord.red + (loser === 'black' ? 1 : 0),
+          black: autoRecord.black + (loser === 'red' ? 1 : 0),
+          draw: autoRecord.draw + (loser === null ? 1 : 0),
+        },
       })
-      get().clearCoach()
     },
 
     toggleFlip: () => set((s) => ({ flipped: !s.flipped })),
@@ -425,14 +585,20 @@ export const useGameStore = create<GameStore>((set, get) => {
     dismissError: () => set({ error: null }),
 
     setMode: (mode) => {
-      const { playerColor } = get()
+      const { playerColor, autoLevels, autoLevelsChosen } = get()
       set({
         mode,
-        // 人机模式下默认把自己那一侧摆到下方，省得手动翻
+        // 人机模式下默认把自己那一侧摆到下方，省得手动翻。
+        // 机机对战不翻 —— 红方在下方是看棋的默认朝向。
         flipped: mode === 'engine' && playerColor === 'black',
         engineInfo: null,
         hints: [],
         hintInfo: null,
+        // 进机机模式时**先摇一次**，让设置页显示的就是这一局真要用的档位 ——
+        // 显示一套、开局用另一套，是最容易被当成 bug 的那种不一致。
+        autoLevels: mode === 'auto' ? rollAutoLevels(autoLevels, autoLevelsChosen) : autoLevels,
+        // 换模式等于换一轮观战，战绩与倒计时都重来
+        ...(mode === 'auto' ? { autoRecord: EMPTY_RECORD, nextGameAt: null } : {}),
       })
     },
 
@@ -448,15 +614,49 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     setDifficulty: (level) => set({ difficulty: level, engineInfo: null, hints: [], hintInfo: null }),
 
+    setAutoLevel: (color, level) =>
+      set((s) => ({
+        autoLevels: level === null ? s.autoLevels : { ...s.autoLevels, [color]: level },
+        // 选「随机」等于把这一方**交还给随机** —— 从此每局重摇
+        autoLevelsChosen: { ...s.autoLevelsChosen, [color]: level !== null },
+        engineInfo: null,
+      })),
+
+    toggleAutoPlaying: () => {
+      const { autoPlaying, state, mode } = get()
+      if (autoPlaying) {
+        set({ autoPlaying: false })
+        return
+      }
+      set({ autoPlaying: true })
+      // 接着下：还在局中就直接续上；已经终局就**立刻开下一局** ——
+      // 按钮上写的也是「立即开始」，说的就是这件事
+      if (mode === 'auto' && state?.status.over) void get().startNextGame()
+    },
+
+    stepOnce: async () => {
+      // 先关连播再走：开着的话这一步走完副作用立刻接着走下一步，
+      // 「单步」就等于没按（而且看不出来为什么没用）
+      set({ autoPlaying: false })
+      await get().enginePlay()
+    },
+
     enginePlay: async () => {
       if (engineInFlight) return
-      const { mode, difficulty, state } = get()
-      if (mode !== 'engine' || !state || state.status.over) return
+      const { mode, difficulty, autoLevels, state } = get()
+      if (!state || state.status.over) return
+      // 双人同机里没有引擎的事
+      if (mode !== 'engine' && mode !== 'auto') return
+      // 复盘时盘面停在过去，别拿历史局面接着往下走
+      if (state.cursor !== state.history.length) return
+
+      // 档位按**当前该走的那一方**取 —— 机机对战两边各有一档
+      const level = levelForSide(mode, state.side, difficulty, autoLevels)
 
       engineInFlight = true
       set({ thinking: true, error: null })
       try {
-        const response = await bridge.engineMove(difficulty, THINK_MS[difficulty])
+        const response = await bridge.engineMove(level, THINK_MS[level])
         set({
           state: response.state,
           selected: null,
