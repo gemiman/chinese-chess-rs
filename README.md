@@ -578,7 +578,7 @@ M1 剩下的工作是**参数标定**（见下）。
 | `bash scripts/ci/assert_no_io_deps.sh` | ✅ 通过（xq-core 生产依赖 0 个，xq-ai 仅依赖 xq-core） |
 | `python scripts/validate_docs.py` | ✅ 链接与关键数字全通过 |
 | `python scripts/validate_knowledge.py` | ✅ 138 条全通过 |
-| `node scripts/dev/ui_probe.mjs` | ✅ **117 项**交互检查全通过（浏览器 + HTTP 桥，走完三页；跑几分钟） |
+| `node scripts/dev/ui_probe.mjs` | ✅ **118 项**交互检查全通过（浏览器 + HTTP 桥，走完三页；跑几分钟） |
 | `node scripts/dev/voice_probe.mjs` | ✅ **22 项**播报检查全通过（假 Audio 记录点了哪些素材、按什么顺序） |
 | `node scripts/dev/desktop_probe.mjs` | ✅ Tauri 外壳 **12 个 command** + **32 项**真实 UI 检查全通过 |
 | `perft(1..5)` | ✅ 44 / 1,920 / 79,666 / 3,290,240 / 133,312,995 |
