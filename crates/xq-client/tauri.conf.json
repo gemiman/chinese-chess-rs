@@ -25,13 +25,27 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.png",
       "icons/icon.ico"
-    ]
+    ],
+    "publisher": "弈道",
+    "copyright": "© 2026 弈道",
+    "shortDescription": "会说棋的中国象棋：Rust 规则内核 + Rust 引擎 + 战法讲解",
+    "homepage": "https://github.com/gemiman/chinese-chess-rs",
+    "windows": {
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      },
+      "nsis": {
+        "languages": ["SimpChinese"],
+        "installMode": "currentUser",
+        "installerHooks": "./windows/hooks.nsh"
+      }
+    }
   }
 }

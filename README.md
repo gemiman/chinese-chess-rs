@@ -356,6 +356,36 @@ debug = true
 
 ## 9. 快速开始
 
+### 9.1a 下载安装包（Windows，普通用户先看这个）
+
+到 [Releases](https://github.com/gemiman/chinese-chess-rs/releases) 下载 `Yidao_0.1.0_x64-setup.exe`，
+双击安装即可 —— **不需要 Rust、Node 或任何开发环境**。装完就是个能离线下的完整象棋程序，
+不连任何服务端。
+
+| 事项 | 说明 |
+|---|---|
+| 装到哪 | 当前用户目录（`%LOCALAPPDATA%\Yidao`），**不弹管理员提权** |
+| 快捷方式 | 开始菜单 + 桌面各一个（都叫「Yidao」） |
+| 卸载 | 设置 → 应用 → 已安装的应用 → 弈道 → 卸载（开始菜单里也放了卸载入口） |
+| 系统要求 | Windows 10 1809+ / 11（64 位） |
+| 依赖 | 微软 WebView2 运行时。Win11 与多数 Win10 自带；缺失时安装包会引导补装 |
+
+> ⚠️ **会弹「Windows 已保护你的电脑 / 未知发布者」。** 这是**没买代码签名证书**的软件
+> 必然遇到的提示，不是文件有问题 —— 点「更多信息」→「仍要运行」即可。
+> 想消掉它得买代码签名证书（个人版一年数百元，EV 版数千元），属于产品化阶段的事。
+> 顺带一提，安装包**没签名，也就不该期待它被当成可信软件**：拿到安装包请核对它来自本仓库。
+
+**自己重新打包**（改了代码要出新包时）：
+
+```bash
+pnpm -C frontend build
+cd crates/xq-client && npx @tauri-apps/cli build
+```
+
+产物在 `target/release/bundle/nsis/Yidao_<版本>_x64-setup.exe`。打包参数见
+[`crates/xq-client/tauri.conf.json`](crates/xq-client/tauri.conf.json) 的 `bundle` 段：
+只出 NSIS、安装界面简体中文、装到当前用户、WebView2 引导程序打进包内。
+
 ### 9.1 桌面客户端（推荐）
 
 ```bash
