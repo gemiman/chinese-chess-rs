@@ -79,6 +79,7 @@ export function PlayPage({ state }: { state: StateDto }) {
   const nextGameAt = useGameStore((s) => s.nextGameAt)
   const toggleAutoPlaying = useGameStore((s) => s.toggleAutoPlaying)
   const stepOnce = useGameStore((s) => s.stepOnce)
+  const stopAuto = useGameStore((s) => s.stopAuto)
 
   const [panel, setPanel] = useState<Panel>('none')
   const [text, setText] = useState('')
@@ -163,8 +164,14 @@ export function PlayPage({ state }: { state: StateDto }) {
           interactive={interactive}
           moveSpeed={moveSpeed}
         />
-        {/* 战法名出场只在对局中放，复盘时别炸场 */}
-        {ended ? null : <TacticReveal note={coachNote} />}
+        {/* 战法名出场：只在**讲的就是当前这一手**时放。
+            终局那一手也照放 —— 「绝杀」那块牌匾正是这一局最该看的一下，
+            而 `App.tsx` 会等它播完再跳分析页。
+            用「手数对得上」而不是「还没终局」当条件：复盘翻到别的手时，
+            手里的讲解属于另一个局面，放了就是炸场。 */}
+        {coachNote !== null && coachNote.ply === total ? (
+          <TacticReveal note={coachNote} />
+        ) : null}
       </div>
 
       {ended ? (
@@ -209,6 +216,19 @@ export function PlayPage({ state }: { state: StateDto }) {
             )}
             <button type="button" className="btn" onClick={toggleFlip}>
               翻转
+            </button>
+            {/* 「暂停」只是把倒计时按住 —— 继续一按，20 秒后又是一局。
+                看够了几十局想收手，得有一个**真的停下来**的出口。 */}
+            <button
+              type="button"
+              className="btn"
+              title="停止连播，回到开局前的设置页"
+              onClick={() => {
+                stopAuto()
+                navigate('setup', true)
+              }}
+            >
+              返回设置
             </button>
             <span className="play__spacer" />
             <span className="play__mode">{autoStatus}</span>

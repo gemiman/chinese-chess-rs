@@ -112,6 +112,14 @@ pub enum NotationError {
     Empty,
     /// 无法识别的棋子字。
     UnknownPieceChar(char),
+    /// 字形**认识**，但它属于另一方 —— 也就是写对了字、错在「现在轮到谁走」。
+    ///
+    /// # 为什么要和 `UnknownPieceChar` 分开
+    ///
+    /// 两件事对用户是两种不同的错：前者是「你打错字了」，后者是「这步棋现在不归这一方走」。
+    /// 合成一个「无法识别的棋子字」，用户照着界面输出的记谱原样输入却被告知「不认识这个字」，
+    /// 只会往错的方向查 —— 而 `馬` 明明就是界面自己刚输出的那个字。
+    WrongSideGlyph { ch: char, side: Color },
     /// 缺少棋子字。
     MissingPieceChar,
     /// 缺少路数。
@@ -137,6 +145,12 @@ impl core::fmt::Display for NotationError {
         match self {
             NotationError::Empty => write!(f, "记谱为空"),
             NotationError::UnknownPieceChar(c) => write!(f, "无法识别的棋子字: {c}"),
+            NotationError::WrongSideGlyph { ch, side } => write!(
+                f,
+                "「{ch}」是{}方的字形，现在轮到{}方走",
+                side.opponent().name_zh(),
+                side.name_zh()
+            ),
             NotationError::MissingPieceChar => write!(f, "缺少棋子字"),
             NotationError::MissingRoute => write!(f, "缺少起点路数"),
             NotationError::MissingAction => write!(f, "缺少动作字（进/退/平）"),
@@ -350,11 +364,14 @@ fn parse_desc(text: &str, side: Color) -> Result<MoveDesc, NotationError> {
     // 校验棋子字与当前走子方是否匹配。棋子绝大多数红黑异形（帥/將、俥/車、傌/馬…），
     // 写错即视为非法记谱 —— 否则「帥五进一」会被误匹配到黑方的將。
     // 只有通用简体写法「车」「马」红黑同字，颜色交由走子方决定。
+    //
+    // 颜色不符要报**自己的**错误码，不能混进「无法识别的棋子字」：字是认识的
+    // （界面自己就输出这个字形），错的是「这一步不归现在这一方走」。
     let check_glyph = |glyph_color: Option<Color>, ch: char| -> Result<(), NotationError> {
         match glyph_color {
             None => Ok(()),
             Some(c) if c == side => Ok(()),
-            Some(_) => Err(NotationError::UnknownPieceChar(ch)),
+            Some(_) => Err(NotationError::WrongSideGlyph { ch, side }),
         }
     };
 
@@ -575,6 +592,63 @@ mod tests {
         }
     }
 
+    /// 往返：覆盖「前 / 中 / 后 / 序数」那条渲染路径。
+    ///
+    /// # 为什么单开一条
+    ///
+    /// `roundtrip_from_startpos` 只走了**开局局面**，而消歧字形要「同一条竖线上
+    /// 有两个以上同种同色棋子」才出现 —— 开局一个都没有。于是那条渲染分支
+    /// （`Subject::Front/Back/Middle/Nth`）从来没被往返验证过：
+    /// 渲染错了也看不出来，而它恰恰是**唯一会输出非路数前缀**的地方。
+    ///
+    /// > 顺带记一笔：这个缺口是「界面输出的记谱，输入框读不回来」这个报障引出来的。
+    /// > 那几条实测失败其实都是**假警报** —— 报的是「马8进7 报错」，可当时轮到红方走；
+    /// > 「俥一平二」报错，可那步被自己的马挡住、本来就不合法。真正缺的是这里的往返覆盖。
+    #[test]
+    fn roundtrip_covers_disambiguation_glyphs() {
+        const CASES: [(&str, &str); 3] = [
+            // 同线两车 → 前 / 后
+            ("4k4/9/9/9/9/9/R8/9/R8/3K5 w - - 0 1", "同线两车"),
+            // 同线三车 → 前 / 中 / 后
+            ("4k4/9/9/9/R8/9/R8/9/R8/3K5 w - - 0 1", "同线三车"),
+            // 同线五兵 → 前 / 二 / 三 / 四 / 后
+            ("4k4/9/P8/P8/P8/P8/P8/9/9/3K5 w - - 0 1", "同线五兵"),
+        ];
+
+        // 四种消歧形式都要真出现过，否则这条用例可能整条空转：
+        // 局面摆错、或者渲染压根没走消歧分支，测试照样"通过"。
+        let mut seen: Vec<&str> = Vec::new();
+        for (fen, label) in CASES {
+            let mut pos = crate::fen::from_fen(fen).unwrap_or_else(|e| panic!("{label}: {e}"));
+            let moves = pos.legal_moves();
+            assert!(!moves.is_empty(), "{label}: 应当有着法");
+
+            for mv in moves {
+                let text = pos
+                    .to_chinese_notation(mv)
+                    .unwrap_or_else(|e| panic!("{label}: 生成记谱失败 {e}"));
+                match parse_disambig(text.chars().next().unwrap()) {
+                    Some(Subject::Front) => seen.push("front"),
+                    Some(Subject::Back) => seen.push("back"),
+                    Some(Subject::Middle) => seen.push("middle"),
+                    Some(Subject::Nth(_)) => seen.push("nth"),
+                    _ => {}
+                }
+                let parsed = pos
+                    .from_chinese_notation(&text)
+                    .unwrap_or_else(|e| panic!("{label}: 解析「{text}」失败: {e}"));
+                assert_eq!(parsed, mv, "{label}: 记谱「{text}」往返后着法不一致");
+            }
+        }
+
+        for form in ["front", "middle", "back", "nth"] {
+            assert!(
+                seen.contains(&form),
+                "没走到「{form}」这条消歧分支，用例等于没测到它；实际见到 {seen:?}"
+            );
+        }
+    }
+
     /// 解析：从初始局面按记谱走若干步经典开局。
     ///
     /// > 注意黑方的路数方向：黑方从自己的右侧（即棋图的 `a` 列）数 1 路，
@@ -643,6 +717,10 @@ mod tests {
     }
 
     /// 红黑异形：轮黑方走时写「帥」应被判为非法记谱，而不是误匹配到黑將。
+    ///
+    /// ⚠️ 报的必须是 `WrongSideGlyph` 而**不是** `UnknownPieceChar`。两者的区别对用户
+    /// 是两种完全不同的错：「字不认识」会让人以为自己打错字了，而「帥」是界面自己
+    /// 输出的字形之一，照着输却被告知「不认识这个字」，只会往错的方向查。
     #[test]
     fn wrong_side_glyph_is_rejected() {
         let mut pos = Position::startpos();
@@ -653,10 +731,30 @@ mod tests {
 
         assert_eq!(
             pos.from_chinese_notation("帥五进一"),
-            Err(NotationError::UnknownPieceChar('帥')),
+            Err(NotationError::WrongSideGlyph {
+                ch: '帥',
+                side: Color::Black
+            }),
             "黑方走子时不应接受红方的「帥」字"
         );
         // 同一个着法用黑方字形写就应当能解析
         assert!(pos.from_chinese_notation("將5进1").is_ok());
+    }
+
+    /// 走错方的字形，提示里要说清**是谁的字、现在该谁走**。
+    ///
+    /// 这条文案就是用户唯一能看到的线索：写成「无法识别的棋子字」会把人引向
+    /// 「我是不是打错字了」，而真正的原因是他把黑方的记谱输在了红方的回合。
+    #[test]
+    fn wrong_side_glyph_message_names_both_sides() {
+        let mut pos = Position::startpos();
+        assert_eq!(pos.side_to_move(), Color::Red);
+        let message = pos
+            .from_chinese_notation("馬8进7")
+            .expect_err("红方回合不该接受黑方的「馬」")
+            .to_string();
+        assert!(message.contains('馬'), "要点出是哪个字：{message}");
+        assert!(message.contains("黑方"), "要说是哪一方的字形：{message}");
+        assert!(message.contains("红方"), "要说现在轮到谁走：{message}");
     }
 }

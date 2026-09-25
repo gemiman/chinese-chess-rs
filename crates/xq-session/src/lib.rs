@@ -37,7 +37,10 @@ use xq_ai::{AtomicStop, Difficulty, Engine, StopSignal};
 use xq_coach::{Coach, GameContext, Verbosity};
 use xq_core::piece::{color_of, kind_of};
 use xq_core::square::{BOARD_SIZE, col_of, row_of, to_iccs};
-use xq_core::{Color, GameStatus, Move, MoveNature, PieceKind, Position, SIXTY_MOVE_HALF_MOVES};
+use xq_core::{
+    Action, Color, GameStatus, Move, MoveNature, PieceKind, Position, SIXTY_MOVE_HALF_MOVES,
+    Subject,
+};
 
 /// 全局应用状态。本地单用户开发工具，只维护一局。
 pub struct AppState {
@@ -619,7 +622,16 @@ impl Game {
             .to_chinese_notation(mv)
             .unwrap_or_else(|_| format!("{}{}", to_iccs(mv.from()), to_iccs(mv.to())));
         let iccs = self.pos.to_iccs_string(mv);
-        let capture = self.pos.piece_at(mv.to()) != xq_core::EMPTY;
+        let target = self.pos.piece_at(mv.to());
+        let capture = target != xq_core::EMPTY;
+        let captured = kind_of(target).map(|kind| kind_word(kind).to_string());
+        // 播报的分段要在**落子前**算：消歧用的「前 / 后 / 中」依赖当前盘面
+        let speech = self.pos.describe(mv).ok().map(|desc| MoveSpeech {
+            kind: kind_word(desc.kind).to_string(),
+            subject: subject_word(desc.subject),
+            action: action_word(desc.action).to_string(),
+            value: desc.value,
+        });
         let side = color_word(self.pos.side_to_move()).to_string();
 
         // ② 算性质（nature_of 内部自己做 make/unmake，不影响局面）
@@ -634,6 +646,8 @@ impl Game {
             iccs,
             notation,
             capture,
+            captured,
+            speech,
             nature: nature_word(nature).to_string(),
             nature_text: nature.name_zh().to_string(),
             side,
@@ -888,6 +902,28 @@ fn kind_word(kind: PieceKind) -> &'static str {
     }
 }
 
+/// 记谱起点的标识方式 → 播报用的标识。
+///
+/// 路数直接用数字串（`"3"`）；「前 / 后 / 中」和序数各自成词 —— 它们在语音里
+/// 是**前缀**（前车、二卒），拼法与前缀不同的片段不是一回事。
+fn subject_word(subject: Subject) -> String {
+    match subject {
+        Subject::Route(route) => route.to_string(),
+        Subject::Front => "front".to_string(),
+        Subject::Back => "back".to_string(),
+        Subject::Middle => "middle".to_string(),
+        Subject::Nth(ordinal) => format!("nth{ordinal}"),
+    }
+}
+
+fn action_word(action: Action) -> &'static str {
+    match action {
+        Action::Advance => "advance",
+        Action::Retreat => "retreat",
+        Action::Traverse => "traverse",
+    }
+}
+
 /// 对应 `assets/pieces/<sprite>.svg` 的文件名主干。
 ///
 /// 黑方的「将」用的是 `general` 而非 `king`，与素材文件名保持一致；
@@ -1058,6 +1094,24 @@ pub struct MoveOption {
     pub capture: bool,
 }
 
+/// 走法播报的分段要素。
+///
+/// 中文记谱「炮二平五」在语音里要拆成三段拼出来：[红方] + [炮二] + [平五]。
+/// 这里只给**语义要素**，不拼文件名 —— 用哪个音频、怎么拼是前端的事
+/// （见 `assets/voice/manifest.json`）。Rust 侧不必知道素材怎么命名，
+/// 素材换了名字也不用改规则层。
+#[derive(Serialize, Clone, Debug)]
+pub struct MoveSpeech {
+    /// 棋子种类：`chariot` / `horse` / `cannon` / `elephant` / `advisor` / `king` / `pawn`
+    pub kind: String,
+    /// 起点标识：路数 `"1"`~`"9"`，或 `front` / `back` / `middle` / `nth3`
+    pub subject: String,
+    /// 动作：`advance` / `retreat` / `traverse`
+    pub action: String,
+    /// 动作后的数字 1..=9
+    pub value: u8,
+}
+
 /// 已经走过的一步。
 #[derive(Serialize, Clone)]
 pub struct PlayedMove {
@@ -1066,6 +1120,13 @@ pub struct PlayedMove {
     pub iccs: String,
     pub notation: String,
     pub capture: bool,
+    /// 被吃棋子的种类（`chariot` / `horse` / …）。没吃子时为 `None`。
+    ///
+    /// 光有 `capture` 这个真假值说不出「吃车」—— 得知道吃的是什么。
+    /// 被吃的一定是对方的子，所以颜色由 `side` 反推，这里只给种类。
+    pub captured: Option<String>,
+    /// 走法播报的分段；`describe` 失败时为 `None`（播报降级为不报走法）。
+    pub speech: Option<MoveSpeech>,
     /// `check` | `capture` | `escape` | `interpose` | … 见 `MoveNature`
     pub nature: String,
     /// 性质的中文说明。
@@ -1435,5 +1496,39 @@ mod tests {
         // 越界的手数要报错，且报错之后游标仍在原处
         assert!(state.analyze_ply(99, Difficulty::L1, 100).is_err());
         assert_eq!(state.with_game(|game| game.cursor()), 2);
+    }
+
+    /// 吃子要带上**吃的是什么**：光有 `capture` 这个真假值，「吃车」这句话说不出来。
+    ///
+    /// 用最小局面：红车在黑车正下方一格，一步吃掉。这样测试不依赖开局库，
+    /// 也不受引擎搜索影响。
+    #[test]
+    fn capture_carries_the_captured_piece_kind() {
+        let fen = "r3k4/R8/9/9/9/9/9/9/9/3K5 w - - 0 1";
+        let mut game = Game::new();
+        game.load_fen(fen).expect("这个 FEN 应当能解析");
+
+        let played = game.apply_iccs("a8", "a9").expect("车吃车应当合法");
+        assert!(played.capture, "这一步是吃子");
+        assert_eq!(played.captured.as_deref(), Some("chariot"), "被吃的是车");
+
+        // 没吃子的时候这个字段必须是 None —— 播报靠它决定要不要喊「吃X」
+        let quiet = game.apply_iccs("e9", "e8").expect("将应当能走一步");
+        assert!(!quiet.capture);
+        assert_eq!(quiet.captured, None);
+    }
+
+    /// 走法播报的分段：中文记谱要拆成「棋子+起点」和「动作+数」两段才念得出来。
+    #[test]
+    fn speech_splits_a_notation_into_segments() {
+        let mut game = Game::new();
+        let played = game.apply_iccs("h2", "e2").expect("炮二平五应当合法");
+        assert_eq!(played.notation, "炮二平五");
+
+        let speech = played.speech.expect("合法着法应当能给出播报分段");
+        assert_eq!(speech.kind, "cannon");
+        assert_eq!(speech.subject, "2", "炮二 → 起点是二路");
+        assert_eq!(speech.action, "traverse", "平是横走");
+        assert_eq!(speech.value, 5, "炮二平五 → 落到五路");
     }
 }

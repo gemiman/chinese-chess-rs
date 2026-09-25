@@ -60,6 +60,23 @@ export interface MoveOption {
   capture: boolean
 }
 
+/** 走法播报的分段要素。与 `xq-session::MoveSpeech` 一一对应。 */
+export interface MoveSpeech {
+  /** 棋子种类：`chariot` / `horse` / `cannon` / `elephant` / `advisor` / `king` / `pawn` */
+  kind: string
+  /**
+   * 起点标识：路数 `"1"`~`"9"`，或 `front` / `back` / `middle` / `nth3`。
+   *
+   * 同一条竖线上有多个同种同色棋子时，路数无法唯一标识起点，记谱改用序数
+   * （前车、中炮、二卒）—— 这些在语音里是**前缀**，音频片段也和路数形式分开。
+   */
+  subject: string
+  /** 动作：`advance` / `retreat` / `traverse` */
+  action: string
+  /** 动作后的数字 1..=9 */
+  value: number
+}
+
 /** 已经走过的一步。 */
 export interface PlayedMove extends MoveOption {
   /** check / capture / escape / interpose / capture_attacker / idle */
@@ -67,6 +84,15 @@ export interface PlayedMove extends MoveOption {
   /** 性质的中文说明。 */
   nature_text: string
   side: Color
+  /**
+   * 被吃棋子的种类（`chariot` / `horse` / …）；没吃子为 `null`。
+   *
+   * 光有 `capture` 这个真假值说不出「吃车」。被吃的一定是对方的子，
+   * 所以颜色由 `side` 反推。
+   */
+  captured: string | null
+  /** 走法播报的分段；`null` 表示这一步报不了走法。 */
+  speech: MoveSpeech | null
 }
 
 /** 完整局面快照。前端渲染所需的一切都在这里。 */

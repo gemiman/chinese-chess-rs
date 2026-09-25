@@ -12,6 +12,7 @@
 import { create } from 'zustand'
 
 import { bridge } from './bridge'
+import { configure, resetAnnouncements, warmUp } from './speech'
 import {
   AUTO_GAP_MS,
   DEEP_LEVEL,
@@ -165,6 +166,83 @@ function savePreset(preset: TimePresetId): void {
   }
 }
 
+/** 语音开关的本地存储键。 */
+const VOICE_KEY = 'xq.voice-enabled'
+/** 语音音量的本地存储键。 */
+const VOICE_VOLUME_KEY = 'xq.voice-volume'
+/** 语速倍率的本地存储键。 */
+const VOICE_SPEED_KEY = 'xq.voice-speed'
+
+/**
+ * 语速默认 1.3 —— **比素材本身快**。
+ *
+ * 素材是按 +8% 合成的，实测听着仍然慢；与其重录一遍素材，不如让播放端可调，
+ * 用户自己拨到合适为止（见 `speech.ts` 的 `configure`）。
+ */
+function loadVoiceSpeed(): number {
+  try {
+    const raw = localStorage.getItem(VOICE_SPEED_KEY)
+    if (raw !== null) {
+      const value = Number(raw)
+      if (Number.isFinite(value) && value >= 1 && value <= 2) return value
+    }
+  } catch {
+    // 同 loadSpeed
+  }
+  return 1.3
+}
+
+function saveVoiceSpeed(speed: number): void {
+  try {
+    localStorage.setItem(VOICE_SPEED_KEY, String(speed))
+  } catch {
+    // 同上
+  }
+}
+
+/**
+ * 语音默认**开着** —— 这是用户要的功能，默认关掉等于没做。
+ *
+ * 音量默认 0.8 而不是 1.0：喊「将军」「绝杀」的片段本身录得比较冲，
+ * 满音量会吓人一跳。
+ */
+function loadVoiceEnabled(): boolean {
+  try {
+    return localStorage.getItem(VOICE_KEY) !== 'off'
+  } catch {
+    return true
+  }
+}
+
+function loadVoiceVolume(): number {
+  try {
+    const raw = localStorage.getItem(VOICE_VOLUME_KEY)
+    if (raw !== null) {
+      const value = Number(raw)
+      if (Number.isFinite(value) && value >= 0 && value <= 1) return value
+    }
+  } catch {
+    // 同 loadSpeed
+  }
+  return 0.8
+}
+
+function saveVoiceEnabled(enabled: boolean): void {
+  try {
+    localStorage.setItem(VOICE_KEY, enabled ? 'on' : 'off')
+  } catch {
+    // 同 loadSpeed
+  }
+}
+
+function saveVoiceVolume(volume: number): void {
+  try {
+    localStorage.setItem(VOICE_VOLUME_KEY, String(volume))
+  } catch {
+    // 同上
+  }
+}
+
 /**
  * 操作被拒绝之后重新拉一次权威局面。
  *
@@ -228,6 +306,13 @@ interface GameStore {
    */
   autoPlaying: boolean
   /**
+   * 叫停机机对战的连播。
+   *
+   * 与「暂停」不同：暂停只是把倒计时按住，按「继续」就接着跑；叫停是把连播**彻底结束** ——
+   * 待开的下一局也清掉，用户回到开局前的设置页。看几十局之后想收手，只能暂停是不够的。
+   */
+  stopAuto: () => void
+  /**
    * 机机对战：下一局的开始时刻（毫秒时间戳）；`null` = 没排下一局。
    *
    * 存**时刻**而不是「还剩几秒」：秒数要有人每秒去改它，而时刻是死的，
@@ -280,6 +365,18 @@ interface GameStore {
   setMoveSpeed: (speed: MoveSpeed) => void
   /** 设置限时档位。下一局开局时生效。 */
   setTimePreset: (preset: TimePresetId) => void
+  /** 语音播报开关（记在 localStorage 里）。 */
+  voiceEnabled: boolean
+  /** 语音音量 0~1（记在 localStorage 里）。 */
+  voiceVolume: number
+  /** 语速倍率 1~2（记在 localStorage 里）。 */
+  voiceSpeed: number
+  /** 开关语音播报。 */
+  toggleVoice: () => void
+  /** 设置语音音量。 */
+  setVoiceVolume: (volume: number) => void
+  /** 设置语速倍率。 */
+  setVoiceSpeed: (speed: number) => void
   /** 手动清除错误提示。 */
   dismissError: () => void
 
@@ -398,6 +495,9 @@ export const useGameStore = create<GameStore>((set, get) => {
       autoLevels: mode === 'auto' ? rollAutoLevels(autoLevels, autoLevelsChosen) : autoLevels,
       ...(fresh ? { autoRecord: EMPTY_RECORD } : {}),
     })
+    // 新的一局：终局去重和待播队列都要清 —— 手数从 1 重新数，不清的话
+    //「第 7 手被将死」在第二局会被当成已经念过，绝杀就不出声了
+    resetAnnouncements()
     get().clearCoach()
   }
 
@@ -410,6 +510,9 @@ export const useGameStore = create<GameStore>((set, get) => {
     flipped: false,
     moveSpeed: loadSpeed(),
     timePreset: loadPreset(),
+    voiceEnabled: loadVoiceEnabled(),
+    voiceVolume: loadVoiceVolume(),
+    voiceSpeed: loadVoiceSpeed(),
 
     mode: 'hotseat',
     playerColor: 'red',
@@ -432,6 +535,13 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     load: async () => {
       set({ busy: true, error: null })
+      // 语音：把设置交给播报模块，顺便把素材烘进浏览器缓存（第一次播报才不卡）
+      configure({
+        enabled: get().voiceEnabled,
+        volume: get().voiceVolume,
+        speed: get().voiceSpeed,
+      })
+      if (get().voiceEnabled) warmUp()
       try {
         set({ state: await bridge.state(), busy: false })
       } catch (cause) {
@@ -582,6 +692,30 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({ timePreset: preset })
     },
 
+    toggleVoice: () => {
+      const enabled = !get().voiceEnabled
+      const { voiceVolume: volume, voiceSpeed: speed } = get()
+      saveVoiceEnabled(enabled)
+      configure({ enabled, volume, speed })
+      // 打开时才预热：一直关着的话没必要占带宽
+      if (enabled) warmUp()
+      set({ voiceEnabled: enabled })
+    },
+
+    setVoiceVolume: (volume) => {
+      const clamped = Math.min(1, Math.max(0, volume))
+      saveVoiceVolume(clamped)
+      configure({ enabled: get().voiceEnabled, volume: clamped, speed: get().voiceSpeed })
+      set({ voiceVolume: clamped })
+    },
+
+    setVoiceSpeed: (speed) => {
+      const clamped = Math.min(2, Math.max(1, speed))
+      saveVoiceSpeed(clamped)
+      configure({ enabled: get().voiceEnabled, volume: get().voiceVolume, speed: clamped })
+      set({ voiceSpeed: clamped })
+    },
+
     dismissError: () => set({ error: null }),
 
     setMode: (mode) => {
@@ -621,6 +755,12 @@ export const useGameStore = create<GameStore>((set, get) => {
         autoLevelsChosen: { ...s.autoLevelsChosen, [color]: level !== null },
         engineInfo: null,
       })),
+
+    stopAuto: () => {
+      // 只清这两个：`autoPlayed` 之类的战绩留着，用户回设置页再开一局时
+      // `beginGame(fresh=true)` 会自己清。
+      set({ autoPlaying: false, nextGameAt: null })
+    },
 
     toggleAutoPlaying: () => {
       const { autoPlaying, state, mode } = get()

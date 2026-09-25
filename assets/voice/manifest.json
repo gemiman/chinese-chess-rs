@@ -1,0 +1,1378 @@
+{
+  "voice": "zh-CN-YunjianNeural",
+  "rate": "+8%",
+  "generated_from": "scripts/dev/voice/vocabulary.json",
+  "note": "text 是界面上显示的真词，synth 是实际送去合成的文本（多音字已换同音字）。file 相对 /voice/ 目录。",
+  "clips": {
+    "keyword-eat": {
+      "file": "keyword-eat.mp3",
+      "text": "吃",
+      "synth": "吃"
+    },
+    "status-check": {
+      "file": "status-check.mp3",
+      "text": "将军",
+      "synth": "将军"
+    },
+    "status-stalemate": {
+      "file": "status-stalemate.mp3",
+      "text": "困毙",
+      "synth": "困毙"
+    },
+    "status-draw": {
+      "file": "status-draw.mp3",
+      "text": "和棋",
+      "synth": "和棋"
+    },
+    "status-resign": {
+      "file": "status-resign.mp3",
+      "text": "认输",
+      "synth": "认输"
+    },
+    "status-timeout": {
+      "file": "status-timeout.mp3",
+      "text": "超时",
+      "synth": "超时"
+    },
+    "capture-red-chariot": {
+      "file": "capture-red-chariot.mp3",
+      "text": "吃车",
+      "synth": "吃驹"
+    },
+    "capture-black-chariot": {
+      "file": "capture-red-chariot.mp3",
+      "text": "吃车",
+      "synth": "吃驹"
+    },
+    "capture-red-horse": {
+      "file": "capture-red-horse.mp3",
+      "text": "吃马",
+      "synth": "吃马"
+    },
+    "capture-black-horse": {
+      "file": "capture-red-horse.mp3",
+      "text": "吃马",
+      "synth": "吃马"
+    },
+    "capture-red-cannon": {
+      "file": "capture-red-cannon.mp3",
+      "text": "吃炮",
+      "synth": "吃疱"
+    },
+    "capture-black-cannon": {
+      "file": "capture-red-cannon.mp3",
+      "text": "吃炮",
+      "synth": "吃疱"
+    },
+    "capture-red-elephant": {
+      "file": "capture-red-elephant.mp3",
+      "text": "吃相",
+      "synth": "吃象"
+    },
+    "capture-black-elephant": {
+      "file": "capture-red-elephant.mp3",
+      "text": "吃象",
+      "synth": "吃象"
+    },
+    "capture-red-advisor": {
+      "file": "capture-red-advisor.mp3",
+      "text": "吃仕",
+      "synth": "吃士"
+    },
+    "capture-black-advisor": {
+      "file": "capture-red-advisor.mp3",
+      "text": "吃士",
+      "synth": "吃士"
+    },
+    "capture-red-king": {
+      "file": "capture-red-king.mp3",
+      "text": "吃帅",
+      "synth": "吃帅"
+    },
+    "capture-black-king": {
+      "file": "capture-black-king.mp3",
+      "text": "吃将",
+      "synth": "吃匠"
+    },
+    "capture-red-pawn": {
+      "file": "capture-red-pawn.mp3",
+      "text": "吃兵",
+      "synth": "吃兵"
+    },
+    "capture-black-pawn": {
+      "file": "capture-black-pawn.mp3",
+      "text": "吃卒",
+      "synth": "吃足"
+    },
+    "word-red-chariot-1": {
+      "file": "word-red-chariot-1.mp3",
+      "text": "车一",
+      "synth": "驹一"
+    },
+    "word-red-chariot-2": {
+      "file": "word-red-chariot-2.mp3",
+      "text": "车二",
+      "synth": "驹二"
+    },
+    "word-red-chariot-3": {
+      "file": "word-red-chariot-3.mp3",
+      "text": "车三",
+      "synth": "驹三"
+    },
+    "word-red-chariot-4": {
+      "file": "word-red-chariot-4.mp3",
+      "text": "车四",
+      "synth": "驹四"
+    },
+    "word-red-chariot-5": {
+      "file": "word-red-chariot-5.mp3",
+      "text": "车五",
+      "synth": "驹五"
+    },
+    "word-red-chariot-6": {
+      "file": "word-red-chariot-6.mp3",
+      "text": "车六",
+      "synth": "驹六"
+    },
+    "word-red-chariot-7": {
+      "file": "word-red-chariot-7.mp3",
+      "text": "车七",
+      "synth": "驹七"
+    },
+    "word-red-chariot-8": {
+      "file": "word-red-chariot-8.mp3",
+      "text": "车八",
+      "synth": "驹八"
+    },
+    "word-red-chariot-9": {
+      "file": "word-red-chariot-9.mp3",
+      "text": "车九",
+      "synth": "驹九"
+    },
+    "word-black-chariot-1": {
+      "file": "word-red-chariot-1.mp3",
+      "text": "车一",
+      "synth": "驹一"
+    },
+    "word-black-chariot-2": {
+      "file": "word-red-chariot-2.mp3",
+      "text": "车二",
+      "synth": "驹二"
+    },
+    "word-black-chariot-3": {
+      "file": "word-red-chariot-3.mp3",
+      "text": "车三",
+      "synth": "驹三"
+    },
+    "word-black-chariot-4": {
+      "file": "word-red-chariot-4.mp3",
+      "text": "车四",
+      "synth": "驹四"
+    },
+    "word-black-chariot-5": {
+      "file": "word-red-chariot-5.mp3",
+      "text": "车五",
+      "synth": "驹五"
+    },
+    "word-black-chariot-6": {
+      "file": "word-red-chariot-6.mp3",
+      "text": "车六",
+      "synth": "驹六"
+    },
+    "word-black-chariot-7": {
+      "file": "word-red-chariot-7.mp3",
+      "text": "车七",
+      "synth": "驹七"
+    },
+    "word-black-chariot-8": {
+      "file": "word-red-chariot-8.mp3",
+      "text": "车八",
+      "synth": "驹八"
+    },
+    "word-black-chariot-9": {
+      "file": "word-red-chariot-9.mp3",
+      "text": "车九",
+      "synth": "驹九"
+    },
+    "word-red-horse-1": {
+      "file": "word-red-horse-1.mp3",
+      "text": "马一",
+      "synth": "马一"
+    },
+    "word-red-horse-2": {
+      "file": "word-red-horse-2.mp3",
+      "text": "马二",
+      "synth": "马二"
+    },
+    "word-red-horse-3": {
+      "file": "word-red-horse-3.mp3",
+      "text": "马三",
+      "synth": "马三"
+    },
+    "word-red-horse-4": {
+      "file": "word-red-horse-4.mp3",
+      "text": "马四",
+      "synth": "马四"
+    },
+    "word-red-horse-5": {
+      "file": "word-red-horse-5.mp3",
+      "text": "马五",
+      "synth": "马五"
+    },
+    "word-red-horse-6": {
+      "file": "word-red-horse-6.mp3",
+      "text": "马六",
+      "synth": "马六"
+    },
+    "word-red-horse-7": {
+      "file": "word-red-horse-7.mp3",
+      "text": "马七",
+      "synth": "马七"
+    },
+    "word-red-horse-8": {
+      "file": "word-red-horse-8.mp3",
+      "text": "马八",
+      "synth": "马八"
+    },
+    "word-red-horse-9": {
+      "file": "word-red-horse-9.mp3",
+      "text": "马九",
+      "synth": "马九"
+    },
+    "word-black-horse-1": {
+      "file": "word-red-horse-1.mp3",
+      "text": "马一",
+      "synth": "马一"
+    },
+    "word-black-horse-2": {
+      "file": "word-red-horse-2.mp3",
+      "text": "马二",
+      "synth": "马二"
+    },
+    "word-black-horse-3": {
+      "file": "word-red-horse-3.mp3",
+      "text": "马三",
+      "synth": "马三"
+    },
+    "word-black-horse-4": {
+      "file": "word-red-horse-4.mp3",
+      "text": "马四",
+      "synth": "马四"
+    },
+    "word-black-horse-5": {
+      "file": "word-red-horse-5.mp3",
+      "text": "马五",
+      "synth": "马五"
+    },
+    "word-black-horse-6": {
+      "file": "word-red-horse-6.mp3",
+      "text": "马六",
+      "synth": "马六"
+    },
+    "word-black-horse-7": {
+      "file": "word-red-horse-7.mp3",
+      "text": "马七",
+      "synth": "马七"
+    },
+    "word-black-horse-8": {
+      "file": "word-red-horse-8.mp3",
+      "text": "马八",
+      "synth": "马八"
+    },
+    "word-black-horse-9": {
+      "file": "word-red-horse-9.mp3",
+      "text": "马九",
+      "synth": "马九"
+    },
+    "word-red-cannon-1": {
+      "file": "word-red-cannon-1.mp3",
+      "text": "炮一",
+      "synth": "疱一"
+    },
+    "word-red-cannon-2": {
+      "file": "word-red-cannon-2.mp3",
+      "text": "炮二",
+      "synth": "疱二"
+    },
+    "word-red-cannon-3": {
+      "file": "word-red-cannon-3.mp3",
+      "text": "炮三",
+      "synth": "疱三"
+    },
+    "word-red-cannon-4": {
+      "file": "word-red-cannon-4.mp3",
+      "text": "炮四",
+      "synth": "疱四"
+    },
+    "word-red-cannon-5": {
+      "file": "word-red-cannon-5.mp3",
+      "text": "炮五",
+      "synth": "疱五"
+    },
+    "word-red-cannon-6": {
+      "file": "word-red-cannon-6.mp3",
+      "text": "炮六",
+      "synth": "疱六"
+    },
+    "word-red-cannon-7": {
+      "file": "word-red-cannon-7.mp3",
+      "text": "炮七",
+      "synth": "疱七"
+    },
+    "word-red-cannon-8": {
+      "file": "word-red-cannon-8.mp3",
+      "text": "炮八",
+      "synth": "疱八"
+    },
+    "word-red-cannon-9": {
+      "file": "word-red-cannon-9.mp3",
+      "text": "炮九",
+      "synth": "疱九"
+    },
+    "word-black-cannon-1": {
+      "file": "word-red-cannon-1.mp3",
+      "text": "炮一",
+      "synth": "疱一"
+    },
+    "word-black-cannon-2": {
+      "file": "word-red-cannon-2.mp3",
+      "text": "炮二",
+      "synth": "疱二"
+    },
+    "word-black-cannon-3": {
+      "file": "word-red-cannon-3.mp3",
+      "text": "炮三",
+      "synth": "疱三"
+    },
+    "word-black-cannon-4": {
+      "file": "word-red-cannon-4.mp3",
+      "text": "炮四",
+      "synth": "疱四"
+    },
+    "word-black-cannon-5": {
+      "file": "word-red-cannon-5.mp3",
+      "text": "炮五",
+      "synth": "疱五"
+    },
+    "word-black-cannon-6": {
+      "file": "word-red-cannon-6.mp3",
+      "text": "炮六",
+      "synth": "疱六"
+    },
+    "word-black-cannon-7": {
+      "file": "word-red-cannon-7.mp3",
+      "text": "炮七",
+      "synth": "疱七"
+    },
+    "word-black-cannon-8": {
+      "file": "word-red-cannon-8.mp3",
+      "text": "炮八",
+      "synth": "疱八"
+    },
+    "word-black-cannon-9": {
+      "file": "word-red-cannon-9.mp3",
+      "text": "炮九",
+      "synth": "疱九"
+    },
+    "word-red-elephant-1": {
+      "file": "word-red-elephant-1.mp3",
+      "text": "相一",
+      "synth": "象一"
+    },
+    "word-red-elephant-2": {
+      "file": "word-red-elephant-2.mp3",
+      "text": "相二",
+      "synth": "象二"
+    },
+    "word-red-elephant-3": {
+      "file": "word-red-elephant-3.mp3",
+      "text": "相三",
+      "synth": "象三"
+    },
+    "word-red-elephant-4": {
+      "file": "word-red-elephant-4.mp3",
+      "text": "相四",
+      "synth": "象四"
+    },
+    "word-red-elephant-5": {
+      "file": "word-red-elephant-5.mp3",
+      "text": "相五",
+      "synth": "象五"
+    },
+    "word-red-elephant-6": {
+      "file": "word-red-elephant-6.mp3",
+      "text": "相六",
+      "synth": "象六"
+    },
+    "word-red-elephant-7": {
+      "file": "word-red-elephant-7.mp3",
+      "text": "相七",
+      "synth": "象七"
+    },
+    "word-red-elephant-8": {
+      "file": "word-red-elephant-8.mp3",
+      "text": "相八",
+      "synth": "象八"
+    },
+    "word-red-elephant-9": {
+      "file": "word-red-elephant-9.mp3",
+      "text": "相九",
+      "synth": "象九"
+    },
+    "word-black-elephant-1": {
+      "file": "word-red-elephant-1.mp3",
+      "text": "象一",
+      "synth": "象一"
+    },
+    "word-black-elephant-2": {
+      "file": "word-red-elephant-2.mp3",
+      "text": "象二",
+      "synth": "象二"
+    },
+    "word-black-elephant-3": {
+      "file": "word-red-elephant-3.mp3",
+      "text": "象三",
+      "synth": "象三"
+    },
+    "word-black-elephant-4": {
+      "file": "word-red-elephant-4.mp3",
+      "text": "象四",
+      "synth": "象四"
+    },
+    "word-black-elephant-5": {
+      "file": "word-red-elephant-5.mp3",
+      "text": "象五",
+      "synth": "象五"
+    },
+    "word-black-elephant-6": {
+      "file": "word-red-elephant-6.mp3",
+      "text": "象六",
+      "synth": "象六"
+    },
+    "word-black-elephant-7": {
+      "file": "word-red-elephant-7.mp3",
+      "text": "象七",
+      "synth": "象七"
+    },
+    "word-black-elephant-8": {
+      "file": "word-red-elephant-8.mp3",
+      "text": "象八",
+      "synth": "象八"
+    },
+    "word-black-elephant-9": {
+      "file": "word-red-elephant-9.mp3",
+      "text": "象九",
+      "synth": "象九"
+    },
+    "word-red-advisor-1": {
+      "file": "word-red-advisor-1.mp3",
+      "text": "仕一",
+      "synth": "士一"
+    },
+    "word-red-advisor-2": {
+      "file": "word-red-advisor-2.mp3",
+      "text": "仕二",
+      "synth": "士二"
+    },
+    "word-red-advisor-3": {
+      "file": "word-red-advisor-3.mp3",
+      "text": "仕三",
+      "synth": "士三"
+    },
+    "word-red-advisor-4": {
+      "file": "word-red-advisor-4.mp3",
+      "text": "仕四",
+      "synth": "士四"
+    },
+    "word-red-advisor-5": {
+      "file": "word-red-advisor-5.mp3",
+      "text": "仕五",
+      "synth": "士五"
+    },
+    "word-red-advisor-6": {
+      "file": "word-red-advisor-6.mp3",
+      "text": "仕六",
+      "synth": "士六"
+    },
+    "word-red-advisor-7": {
+      "file": "word-red-advisor-7.mp3",
+      "text": "仕七",
+      "synth": "士七"
+    },
+    "word-red-advisor-8": {
+      "file": "word-red-advisor-8.mp3",
+      "text": "仕八",
+      "synth": "士八"
+    },
+    "word-red-advisor-9": {
+      "file": "word-red-advisor-9.mp3",
+      "text": "仕九",
+      "synth": "士九"
+    },
+    "word-black-advisor-1": {
+      "file": "word-red-advisor-1.mp3",
+      "text": "士一",
+      "synth": "士一"
+    },
+    "word-black-advisor-2": {
+      "file": "word-red-advisor-2.mp3",
+      "text": "士二",
+      "synth": "士二"
+    },
+    "word-black-advisor-3": {
+      "file": "word-red-advisor-3.mp3",
+      "text": "士三",
+      "synth": "士三"
+    },
+    "word-black-advisor-4": {
+      "file": "word-red-advisor-4.mp3",
+      "text": "士四",
+      "synth": "士四"
+    },
+    "word-black-advisor-5": {
+      "file": "word-red-advisor-5.mp3",
+      "text": "士五",
+      "synth": "士五"
+    },
+    "word-black-advisor-6": {
+      "file": "word-red-advisor-6.mp3",
+      "text": "士六",
+      "synth": "士六"
+    },
+    "word-black-advisor-7": {
+      "file": "word-red-advisor-7.mp3",
+      "text": "士七",
+      "synth": "士七"
+    },
+    "word-black-advisor-8": {
+      "file": "word-red-advisor-8.mp3",
+      "text": "士八",
+      "synth": "士八"
+    },
+    "word-black-advisor-9": {
+      "file": "word-red-advisor-9.mp3",
+      "text": "士九",
+      "synth": "士九"
+    },
+    "word-red-king-1": {
+      "file": "word-red-king-1.mp3",
+      "text": "帅一",
+      "synth": "帅一"
+    },
+    "word-red-king-2": {
+      "file": "word-red-king-2.mp3",
+      "text": "帅二",
+      "synth": "帅二"
+    },
+    "word-red-king-3": {
+      "file": "word-red-king-3.mp3",
+      "text": "帅三",
+      "synth": "帅三"
+    },
+    "word-red-king-4": {
+      "file": "word-red-king-4.mp3",
+      "text": "帅四",
+      "synth": "帅四"
+    },
+    "word-red-king-5": {
+      "file": "word-red-king-5.mp3",
+      "text": "帅五",
+      "synth": "帅五"
+    },
+    "word-red-king-6": {
+      "file": "word-red-king-6.mp3",
+      "text": "帅六",
+      "synth": "帅六"
+    },
+    "word-red-king-7": {
+      "file": "word-red-king-7.mp3",
+      "text": "帅七",
+      "synth": "帅七"
+    },
+    "word-red-king-8": {
+      "file": "word-red-king-8.mp3",
+      "text": "帅八",
+      "synth": "帅八"
+    },
+    "word-red-king-9": {
+      "file": "word-red-king-9.mp3",
+      "text": "帅九",
+      "synth": "帅九"
+    },
+    "word-black-king-1": {
+      "file": "word-black-king-1.mp3",
+      "text": "将一",
+      "synth": "匠一"
+    },
+    "word-black-king-2": {
+      "file": "word-black-king-2.mp3",
+      "text": "将二",
+      "synth": "匠二"
+    },
+    "word-black-king-3": {
+      "file": "word-black-king-3.mp3",
+      "text": "将三",
+      "synth": "匠三"
+    },
+    "word-black-king-4": {
+      "file": "word-black-king-4.mp3",
+      "text": "将四",
+      "synth": "匠四"
+    },
+    "word-black-king-5": {
+      "file": "word-black-king-5.mp3",
+      "text": "将五",
+      "synth": "匠五"
+    },
+    "word-black-king-6": {
+      "file": "word-black-king-6.mp3",
+      "text": "将六",
+      "synth": "匠六"
+    },
+    "word-black-king-7": {
+      "file": "word-black-king-7.mp3",
+      "text": "将七",
+      "synth": "匠七"
+    },
+    "word-black-king-8": {
+      "file": "word-black-king-8.mp3",
+      "text": "将八",
+      "synth": "匠八"
+    },
+    "word-black-king-9": {
+      "file": "word-black-king-9.mp3",
+      "text": "将九",
+      "synth": "匠九"
+    },
+    "word-red-pawn-1": {
+      "file": "word-red-pawn-1.mp3",
+      "text": "兵一",
+      "synth": "兵一"
+    },
+    "word-red-pawn-2": {
+      "file": "word-red-pawn-2.mp3",
+      "text": "兵二",
+      "synth": "兵二"
+    },
+    "word-red-pawn-3": {
+      "file": "word-red-pawn-3.mp3",
+      "text": "兵三",
+      "synth": "兵三"
+    },
+    "word-red-pawn-4": {
+      "file": "word-red-pawn-4.mp3",
+      "text": "兵四",
+      "synth": "兵四"
+    },
+    "word-red-pawn-5": {
+      "file": "word-red-pawn-5.mp3",
+      "text": "兵五",
+      "synth": "兵五"
+    },
+    "word-red-pawn-6": {
+      "file": "word-red-pawn-6.mp3",
+      "text": "兵六",
+      "synth": "兵六"
+    },
+    "word-red-pawn-7": {
+      "file": "word-red-pawn-7.mp3",
+      "text": "兵七",
+      "synth": "兵七"
+    },
+    "word-red-pawn-8": {
+      "file": "word-red-pawn-8.mp3",
+      "text": "兵八",
+      "synth": "兵八"
+    },
+    "word-red-pawn-9": {
+      "file": "word-red-pawn-9.mp3",
+      "text": "兵九",
+      "synth": "兵九"
+    },
+    "word-black-pawn-1": {
+      "file": "word-black-pawn-1.mp3",
+      "text": "卒一",
+      "synth": "足一"
+    },
+    "word-black-pawn-2": {
+      "file": "word-black-pawn-2.mp3",
+      "text": "卒二",
+      "synth": "足二"
+    },
+    "word-black-pawn-3": {
+      "file": "word-black-pawn-3.mp3",
+      "text": "卒三",
+      "synth": "足三"
+    },
+    "word-black-pawn-4": {
+      "file": "word-black-pawn-4.mp3",
+      "text": "卒四",
+      "synth": "足四"
+    },
+    "word-black-pawn-5": {
+      "file": "word-black-pawn-5.mp3",
+      "text": "卒五",
+      "synth": "足五"
+    },
+    "word-black-pawn-6": {
+      "file": "word-black-pawn-6.mp3",
+      "text": "卒六",
+      "synth": "足六"
+    },
+    "word-black-pawn-7": {
+      "file": "word-black-pawn-7.mp3",
+      "text": "卒七",
+      "synth": "足七"
+    },
+    "word-black-pawn-8": {
+      "file": "word-black-pawn-8.mp3",
+      "text": "卒八",
+      "synth": "足八"
+    },
+    "word-black-pawn-9": {
+      "file": "word-black-pawn-9.mp3",
+      "text": "卒九",
+      "synth": "足九"
+    },
+    "qual-red-chariot-front": {
+      "file": "qual-red-chariot-front.mp3",
+      "text": "前车",
+      "synth": "前驹"
+    },
+    "qual-black-chariot-front": {
+      "file": "qual-red-chariot-front.mp3",
+      "text": "前车",
+      "synth": "前驹"
+    },
+    "qual-red-horse-front": {
+      "file": "qual-red-horse-front.mp3",
+      "text": "前马",
+      "synth": "前马"
+    },
+    "qual-black-horse-front": {
+      "file": "qual-red-horse-front.mp3",
+      "text": "前马",
+      "synth": "前马"
+    },
+    "qual-red-cannon-front": {
+      "file": "qual-red-cannon-front.mp3",
+      "text": "前炮",
+      "synth": "前疱"
+    },
+    "qual-black-cannon-front": {
+      "file": "qual-red-cannon-front.mp3",
+      "text": "前炮",
+      "synth": "前疱"
+    },
+    "qual-red-elephant-front": {
+      "file": "qual-red-elephant-front.mp3",
+      "text": "前相",
+      "synth": "前象"
+    },
+    "qual-black-elephant-front": {
+      "file": "qual-red-elephant-front.mp3",
+      "text": "前象",
+      "synth": "前象"
+    },
+    "qual-red-advisor-front": {
+      "file": "qual-red-advisor-front.mp3",
+      "text": "前仕",
+      "synth": "前士"
+    },
+    "qual-black-advisor-front": {
+      "file": "qual-red-advisor-front.mp3",
+      "text": "前士",
+      "synth": "前士"
+    },
+    "qual-red-king-front": {
+      "file": "qual-red-king-front.mp3",
+      "text": "前帅",
+      "synth": "前帅"
+    },
+    "qual-black-king-front": {
+      "file": "qual-black-king-front.mp3",
+      "text": "前将",
+      "synth": "前匠"
+    },
+    "qual-red-pawn-front": {
+      "file": "qual-red-pawn-front.mp3",
+      "text": "前兵",
+      "synth": "前兵"
+    },
+    "qual-black-pawn-front": {
+      "file": "qual-black-pawn-front.mp3",
+      "text": "前卒",
+      "synth": "前足"
+    },
+    "qual-red-chariot-back": {
+      "file": "qual-red-chariot-back.mp3",
+      "text": "后车",
+      "synth": "后驹"
+    },
+    "qual-black-chariot-back": {
+      "file": "qual-red-chariot-back.mp3",
+      "text": "后车",
+      "synth": "后驹"
+    },
+    "qual-red-horse-back": {
+      "file": "qual-red-horse-back.mp3",
+      "text": "后马",
+      "synth": "后马"
+    },
+    "qual-black-horse-back": {
+      "file": "qual-red-horse-back.mp3",
+      "text": "后马",
+      "synth": "后马"
+    },
+    "qual-red-cannon-back": {
+      "file": "qual-red-cannon-back.mp3",
+      "text": "后炮",
+      "synth": "后疱"
+    },
+    "qual-black-cannon-back": {
+      "file": "qual-red-cannon-back.mp3",
+      "text": "后炮",
+      "synth": "后疱"
+    },
+    "qual-red-elephant-back": {
+      "file": "qual-red-elephant-back.mp3",
+      "text": "后相",
+      "synth": "后象"
+    },
+    "qual-black-elephant-back": {
+      "file": "qual-red-elephant-back.mp3",
+      "text": "后象",
+      "synth": "后象"
+    },
+    "qual-red-advisor-back": {
+      "file": "qual-red-advisor-back.mp3",
+      "text": "后仕",
+      "synth": "后士"
+    },
+    "qual-black-advisor-back": {
+      "file": "qual-red-advisor-back.mp3",
+      "text": "后士",
+      "synth": "后士"
+    },
+    "qual-red-king-back": {
+      "file": "qual-red-king-back.mp3",
+      "text": "后帅",
+      "synth": "后帅"
+    },
+    "qual-black-king-back": {
+      "file": "qual-black-king-back.mp3",
+      "text": "后将",
+      "synth": "后匠"
+    },
+    "qual-red-pawn-back": {
+      "file": "qual-red-pawn-back.mp3",
+      "text": "后兵",
+      "synth": "后兵"
+    },
+    "qual-black-pawn-back": {
+      "file": "qual-black-pawn-back.mp3",
+      "text": "后卒",
+      "synth": "后足"
+    },
+    "qual-red-chariot-middle": {
+      "file": "qual-red-chariot-middle.mp3",
+      "text": "中车",
+      "synth": "中驹"
+    },
+    "qual-black-chariot-middle": {
+      "file": "qual-red-chariot-middle.mp3",
+      "text": "中车",
+      "synth": "中驹"
+    },
+    "qual-red-horse-middle": {
+      "file": "qual-red-horse-middle.mp3",
+      "text": "中马",
+      "synth": "中马"
+    },
+    "qual-black-horse-middle": {
+      "file": "qual-red-horse-middle.mp3",
+      "text": "中马",
+      "synth": "中马"
+    },
+    "qual-red-cannon-middle": {
+      "file": "qual-red-cannon-middle.mp3",
+      "text": "中炮",
+      "synth": "中疱"
+    },
+    "qual-black-cannon-middle": {
+      "file": "qual-red-cannon-middle.mp3",
+      "text": "中炮",
+      "synth": "中疱"
+    },
+    "qual-red-elephant-middle": {
+      "file": "qual-red-elephant-middle.mp3",
+      "text": "中相",
+      "synth": "中象"
+    },
+    "qual-black-elephant-middle": {
+      "file": "qual-red-elephant-middle.mp3",
+      "text": "中象",
+      "synth": "中象"
+    },
+    "qual-red-advisor-middle": {
+      "file": "qual-red-advisor-middle.mp3",
+      "text": "中仕",
+      "synth": "中士"
+    },
+    "qual-black-advisor-middle": {
+      "file": "qual-red-advisor-middle.mp3",
+      "text": "中士",
+      "synth": "中士"
+    },
+    "qual-red-king-middle": {
+      "file": "qual-red-king-middle.mp3",
+      "text": "中帅",
+      "synth": "中帅"
+    },
+    "qual-black-king-middle": {
+      "file": "qual-black-king-middle.mp3",
+      "text": "中将",
+      "synth": "中匠"
+    },
+    "qual-red-pawn-middle": {
+      "file": "qual-red-pawn-middle.mp3",
+      "text": "中兵",
+      "synth": "中兵"
+    },
+    "qual-black-pawn-middle": {
+      "file": "qual-black-pawn-middle.mp3",
+      "text": "中卒",
+      "synth": "中足"
+    },
+    "nth-red-pawn-2": {
+      "file": "nth-red-pawn-2.mp3",
+      "text": "二兵",
+      "synth": "二兵"
+    },
+    "nth-red-pawn-3": {
+      "file": "nth-red-pawn-3.mp3",
+      "text": "三兵",
+      "synth": "三兵"
+    },
+    "nth-red-pawn-4": {
+      "file": "nth-red-pawn-4.mp3",
+      "text": "四兵",
+      "synth": "四兵"
+    },
+    "nth-red-pawn-5": {
+      "file": "nth-red-pawn-5.mp3",
+      "text": "五兵",
+      "synth": "五兵"
+    },
+    "nth-red-pawn-6": {
+      "file": "nth-red-pawn-6.mp3",
+      "text": "六兵",
+      "synth": "六兵"
+    },
+    "nth-red-pawn-7": {
+      "file": "nth-red-pawn-7.mp3",
+      "text": "七兵",
+      "synth": "七兵"
+    },
+    "nth-red-pawn-8": {
+      "file": "nth-red-pawn-8.mp3",
+      "text": "八兵",
+      "synth": "八兵"
+    },
+    "nth-black-pawn-2": {
+      "file": "nth-black-pawn-2.mp3",
+      "text": "二卒",
+      "synth": "二足"
+    },
+    "nth-black-pawn-3": {
+      "file": "nth-black-pawn-3.mp3",
+      "text": "三卒",
+      "synth": "三足"
+    },
+    "nth-black-pawn-4": {
+      "file": "nth-black-pawn-4.mp3",
+      "text": "四卒",
+      "synth": "四足"
+    },
+    "nth-black-pawn-5": {
+      "file": "nth-black-pawn-5.mp3",
+      "text": "五卒",
+      "synth": "五足"
+    },
+    "nth-black-pawn-6": {
+      "file": "nth-black-pawn-6.mp3",
+      "text": "六卒",
+      "synth": "六足"
+    },
+    "nth-black-pawn-7": {
+      "file": "nth-black-pawn-7.mp3",
+      "text": "七卒",
+      "synth": "七足"
+    },
+    "nth-black-pawn-8": {
+      "file": "nth-black-pawn-8.mp3",
+      "text": "八卒",
+      "synth": "八足"
+    },
+    "move-jin-1": {
+      "file": "move-jin-1.mp3",
+      "text": "进一",
+      "synth": "进一"
+    },
+    "move-jin-2": {
+      "file": "move-jin-2.mp3",
+      "text": "进二",
+      "synth": "进二"
+    },
+    "move-jin-3": {
+      "file": "move-jin-3.mp3",
+      "text": "进三",
+      "synth": "进三"
+    },
+    "move-jin-4": {
+      "file": "move-jin-4.mp3",
+      "text": "进四",
+      "synth": "进四"
+    },
+    "move-jin-5": {
+      "file": "move-jin-5.mp3",
+      "text": "进五",
+      "synth": "进五"
+    },
+    "move-jin-6": {
+      "file": "move-jin-6.mp3",
+      "text": "进六",
+      "synth": "进六"
+    },
+    "move-jin-7": {
+      "file": "move-jin-7.mp3",
+      "text": "进七",
+      "synth": "进七"
+    },
+    "move-jin-8": {
+      "file": "move-jin-8.mp3",
+      "text": "进八",
+      "synth": "进八"
+    },
+    "move-jin-9": {
+      "file": "move-jin-9.mp3",
+      "text": "进九",
+      "synth": "进九"
+    },
+    "move-tui-1": {
+      "file": "move-tui-1.mp3",
+      "text": "退一",
+      "synth": "退一"
+    },
+    "move-tui-2": {
+      "file": "move-tui-2.mp3",
+      "text": "退二",
+      "synth": "退二"
+    },
+    "move-tui-3": {
+      "file": "move-tui-3.mp3",
+      "text": "退三",
+      "synth": "退三"
+    },
+    "move-tui-4": {
+      "file": "move-tui-4.mp3",
+      "text": "退四",
+      "synth": "退四"
+    },
+    "move-tui-5": {
+      "file": "move-tui-5.mp3",
+      "text": "退五",
+      "synth": "退五"
+    },
+    "move-tui-6": {
+      "file": "move-tui-6.mp3",
+      "text": "退六",
+      "synth": "退六"
+    },
+    "move-tui-7": {
+      "file": "move-tui-7.mp3",
+      "text": "退七",
+      "synth": "退七"
+    },
+    "move-tui-8": {
+      "file": "move-tui-8.mp3",
+      "text": "退八",
+      "synth": "退八"
+    },
+    "move-tui-9": {
+      "file": "move-tui-9.mp3",
+      "text": "退九",
+      "synth": "退九"
+    },
+    "move-ping-1": {
+      "file": "move-ping-1.mp3",
+      "text": "平一",
+      "synth": "平一"
+    },
+    "move-ping-2": {
+      "file": "move-ping-2.mp3",
+      "text": "平二",
+      "synth": "平二"
+    },
+    "move-ping-3": {
+      "file": "move-ping-3.mp3",
+      "text": "平三",
+      "synth": "平三"
+    },
+    "move-ping-4": {
+      "file": "move-ping-4.mp3",
+      "text": "平四",
+      "synth": "平四"
+    },
+    "move-ping-5": {
+      "file": "move-ping-5.mp3",
+      "text": "平五",
+      "synth": "平五"
+    },
+    "move-ping-6": {
+      "file": "move-ping-6.mp3",
+      "text": "平六",
+      "synth": "平六"
+    },
+    "move-ping-7": {
+      "file": "move-ping-7.mp3",
+      "text": "平七",
+      "synth": "平七"
+    },
+    "move-ping-8": {
+      "file": "move-ping-8.mp3",
+      "text": "平八",
+      "synth": "平八"
+    },
+    "move-ping-9": {
+      "file": "move-ping-9.mp3",
+      "text": "平九",
+      "synth": "平九"
+    },
+    "tactic-blockade": {
+      "file": "tactic-blockade.mp3",
+      "text": "封锁",
+      "synth": "封锁"
+    },
+    "tactic-capture": {
+      "file": "tactic-capture.mp3",
+      "text": "吃子",
+      "synth": "吃子"
+    },
+    "tactic-capture_attacker": {
+      "file": "tactic-capture_attacker.mp3",
+      "text": "吃将子",
+      "synth": "吃将子"
+    },
+    "tactic-central_control": {
+      "file": "tactic-central_control.mp3",
+      "text": "中路控制",
+      "synth": "中路控制"
+    },
+    "tactic-check": {
+      "file": "status-check.mp3",
+      "text": "将军",
+      "synth": "将军"
+    },
+    "tactic-discovered_attack": {
+      "file": "tactic-discovered_attack.mp3",
+      "text": "闪击",
+      "synth": "闪击"
+    },
+    "tactic-discovered_check": {
+      "file": "tactic-discovered_check.mp3",
+      "text": "闪将",
+      "synth": "闪将"
+    },
+    "tactic-double_cannon_stack": {
+      "file": "tactic-double_cannon_stack.mp3",
+      "text": "重炮",
+      "synth": "虫炮"
+    },
+    "tactic-double_chariot_alternate": {
+      "file": "tactic-double_chariot_alternate.mp3",
+      "text": "双车错",
+      "synth": "双驹错"
+    },
+    "tactic-double_check": {
+      "file": "tactic-double_check.mp3",
+      "text": "双将",
+      "synth": "双将"
+    },
+    "tactic-exchange_offer": {
+      "file": "tactic-exchange_offer.mp3",
+      "text": "邀兑",
+      "synth": "邀兑"
+    },
+    "tactic-flank_tiger": {
+      "file": "tactic-flank_tiger.mp3",
+      "text": "侧面虎",
+      "synth": "侧面虎"
+    },
+    "tactic-fork": {
+      "file": "tactic-fork.mp3",
+      "text": "捉双",
+      "synth": "捉双"
+    },
+    "tactic-heart_pierce": {
+      "file": "tactic-heart_pierce.mp3",
+      "text": "大刀剜心",
+      "synth": "大刀剜心"
+    },
+    "tactic-heaven_earth_cannon": {
+      "file": "tactic-heaven_earth_cannon.mp3",
+      "text": "天地炮",
+      "synth": "天地炮"
+    },
+    "tactic-hollow_cannon": {
+      "file": "tactic-hollow_cannon.mp3",
+      "text": "空头炮",
+      "synth": "空头炮"
+    },
+    "tactic-horse_corner_check": {
+      "file": "tactic-horse_corner_check.mp3",
+      "text": "挂角马",
+      "synth": "挂角马"
+    },
+    "tactic-horse_rear_cannon": {
+      "file": "tactic-horse_rear_cannon.mp3",
+      "text": "马后炮",
+      "synth": "马后炮"
+    },
+    "tactic-horse_slot_check": {
+      "file": "tactic-horse_slot_check.mp3",
+      "text": "卧槽马",
+      "synth": "卧槽马"
+    },
+    "tactic-interpose": {
+      "file": "tactic-interpose.mp3",
+      "text": "垫将",
+      "synth": "垫将"
+    },
+    "tactic-iron_bolt": {
+      "file": "tactic-iron_bolt.mp3",
+      "text": "铁门栓",
+      "synth": "铁门栓"
+    },
+    "tactic-king_escape": {
+      "file": "tactic-king_escape.mp3",
+      "text": "避将",
+      "synth": "避将"
+    },
+    "tactic-lose_material": {
+      "file": "tactic-lose_material.mp3",
+      "text": "失子",
+      "synth": "失子"
+    },
+    "tactic-mate": {
+      "file": "tactic-mate.mp3",
+      "text": "绝杀",
+      "synth": "绝杀"
+    },
+    "tactic-open_file": {
+      "file": "tactic-open_file.mp3",
+      "text": "通线",
+      "synth": "通线"
+    },
+    "tactic-opening_advisor_corner_cannon": {
+      "file": "tactic-opening_advisor_corner_cannon.mp3",
+      "text": "士角炮",
+      "synth": "士角炮"
+    },
+    "tactic-opening_central_cannon": {
+      "file": "tactic-opening_central_cannon.mp3",
+      "text": "中炮",
+      "synth": "中炮"
+    },
+    "tactic-opening_cross_palace_cannon": {
+      "file": "tactic-opening_cross_palace_cannon.mp3",
+      "text": "过宫炮",
+      "synth": "过宫炮"
+    },
+    "tactic-opening_elephant": {
+      "file": "tactic-opening_elephant.mp3",
+      "text": "飞相局",
+      "synth": "飞象局"
+    },
+    "tactic-opening_opposite_cannon": {
+      "file": "tactic-opening_opposite_cannon.mp3",
+      "text": "列炮",
+      "synth": "列炮"
+    },
+    "tactic-opening_pawn_probe": {
+      "file": "tactic-opening_pawn_probe.mp3",
+      "text": "仙人指路",
+      "synth": "仙人指路"
+    },
+    "tactic-opening_reverse_screen_horse": {
+      "file": "tactic-opening_reverse_screen_horse.mp3",
+      "text": "反宫马",
+      "synth": "反宫马"
+    },
+    "tactic-opening_same_side_cannon": {
+      "file": "tactic-opening_same_side_cannon.mp3",
+      "text": "顺炮",
+      "synth": "顺炮"
+    },
+    "tactic-opening_screen_horse": {
+      "file": "tactic-opening_screen_horse.mp3",
+      "text": "屏风马",
+      "synth": "屏风马"
+    },
+    "tactic-opening_single_horse": {
+      "file": "tactic-opening_single_horse.mp3",
+      "text": "单提马",
+      "synth": "单提马"
+    },
+    "tactic-pin": {
+      "file": "tactic-pin.mp3",
+      "text": "牵制",
+      "synth": "牵制"
+    },
+    "tactic-resolve_check": {
+      "file": "tactic-resolve_check.mp3",
+      "text": "解将",
+      "synth": "解将"
+    },
+    "tactic-sacrifice": {
+      "file": "tactic-sacrifice.mp3",
+      "text": "弃子",
+      "synth": "弃子"
+    },
+    "tactic-sea_bottom_moon": {
+      "file": "tactic-sea_bottom_moon.mp3",
+      "text": "海底捞月",
+      "synth": "海底捞月"
+    },
+    "tactic-skewer": {
+      "file": "tactic-skewer.mp3",
+      "text": "串打",
+      "synth": "串打"
+    },
+    "tactic-smothered_palace": {
+      "file": "tactic-smothered_palace.mp3",
+      "text": "闷宫",
+      "synth": "焖宫"
+    },
+    "tactic-stalemate_win": {
+      "file": "status-stalemate.mp3",
+      "text": "困毙",
+      "synth": "困毙"
+    },
+    "tactic-threat": {
+      "file": "tactic-threat.mp3",
+      "text": "威胁",
+      "synth": "威胁"
+    },
+    "tactic-twin_ghosts_door": {
+      "file": "tactic-twin_ghosts_door.mp3",
+      "text": "二鬼拍门",
+      "synth": "二鬼拍门"
+    },
+    "tactic-win_material": {
+      "file": "tactic-win_material.mp3",
+      "text": "得子",
+      "synth": "得子"
+    }
+  }
+}

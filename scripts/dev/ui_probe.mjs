@@ -830,8 +830,8 @@ async function main() {
     })`,
   )
   check(
-    '按钮换成 暂停 / 单步 / 翻转',
-    autoView.buttons.join('/') === '暂停/单步/翻转',
+    '按钮换成 暂停 / 单步 / 翻转 / 返回设置',
+    autoView.buttons.join('/') === '暂停/单步/翻转/返回设置',
     `实际 ${autoView.buttons.join('/')}`,
   )
   check(
@@ -1071,6 +1071,37 @@ async function main() {
   await playMove(client, 4, 2, 4, 6) // 炮五进四，吃掉黑方中卒
   const afterCapture = await limitText()
   check('吃子之后计数清零', afterCapture.includes('限着 0/60 回合'), `实际「${afterCapture}」`)
+
+  console.log('\n[17] 机机对战：随时叫停，回到开局前')
+  // 「暂停」只是把 20 秒倒计时按住，继续一按又是一局。看够了几十局想收手，
+  // 得有出口 —— 这一节验的是那个出口真把连播**停住了**（不只是跳走了页面）。
+  await evaluate(client, `location.hash = '#/setup'`)
+  await waitFor(client, '.setup__start')
+  await clickButton(client, '[aria-label="对局模式"]', '机机对战')
+  await sleep(250)
+  check('开局（机机对战）', (await startGame(client)) === 'ok')
+
+  const pliesAt = async () => (await apiState()).history.length
+  await sleep(4000)
+  const pliesBefore = await pliesAt()
+  check('连播在走棋', pliesBefore > 0, `手数 ${pliesBefore}`)
+
+  const clicked = await clickButton(client, '.play__bar', '返回设置')
+  check('按钮行里有「返回设置」', clicked === 'ok', `clickButton 返回 ${clicked}`)
+  await sleep(2500)
+  const backHash = await evaluate(client, 'location.hash')
+  check('点「返回设置」回到设置页', backHash === '#/setup', `实际 ${backHash}`)
+
+  // 先等一手：点下去那一刻可能正好有一步棋在飞，等它落定再取基准，
+  // 否则「叫停后没再走」会被那一步误判成失败
+  const pliesAtStop = await pliesAt()
+  await sleep(6000)
+  const pliesLater = await pliesAt()
+  check(
+    '叫停之后棋不再往下走',
+    pliesLater === pliesAtStop,
+    `叫停时 ${pliesAtStop} 手，六秒后 ${pliesLater} 手`,
+  )
 
   // 关掉自己建的标签页，不碰别的
   await fetch(`${CDP}/json/close/${client.targetId}`).catch(() => {})

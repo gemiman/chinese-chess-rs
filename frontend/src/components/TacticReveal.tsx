@@ -29,8 +29,12 @@ export function notableTactic(note: CoachNote | null): string | null {
   return formation ? formation.name : null
 }
 
-/** 出场动画时长（毫秒），与 CSS 里的 2500ms 对齐。 */
-const REVEAL_MS = 2500
+/**
+ * 出场动画时长（毫秒），与 CSS 里的 2500ms 对齐。
+ *
+ * 导出是给 `App.tsx` 用的：终局跳分析页要**等这段播完**，两处各写一个数迟早会漂。
+ */
+export const REVEAL_MS = 2500
 
 export function TacticReveal({ note }: { note: CoachNote | null }) {
   const [shown, setShown] = useState<{ name: string; id: number } | null>(null)

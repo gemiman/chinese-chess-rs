@@ -49,6 +49,9 @@ export function SetupPage() {
   const autoLevelsChosen = useGameStore((s) => s.autoLevelsChosen)
   const timePreset = useGameStore((s) => s.timePreset)
   const moveSpeed = useGameStore((s) => s.moveSpeed)
+  const voiceEnabled = useGameStore((s) => s.voiceEnabled)
+  const voiceVolume = useGameStore((s) => s.voiceVolume)
+  const voiceSpeed = useGameStore((s) => s.voiceSpeed)
   const busy = useGameStore((s) => s.busy)
   const setMode = useGameStore((s) => s.setMode)
   const setPlayerColor = useGameStore((s) => s.setPlayerColor)
@@ -56,6 +59,9 @@ export function SetupPage() {
   const setAutoLevel = useGameStore((s) => s.setAutoLevel)
   const setTimePreset = useGameStore((s) => s.setTimePreset)
   const setMoveSpeed = useGameStore((s) => s.setMoveSpeed)
+  const toggleVoice = useGameStore((s) => s.toggleVoice)
+  const setVoiceVolume = useGameStore((s) => s.setVoiceVolume)
+  const setVoiceSpeed = useGameStore((s) => s.setVoiceSpeed)
   const startGame = useGameStore((s) => s.startGame)
 
   const activeDifficulty = DIFFICULTIES.find((d) => d.id === difficulty)
@@ -242,6 +248,65 @@ export function SetupPage() {
             ))}
           </div>
           <p className="muted setup__hint">「慢动作」是留给复盘看棋用的。</p>
+        </section>
+
+        <section className="card">
+          <h3 className="card__title">语音播报</h3>
+          <div className="segmented segmented--wide" role="group" aria-label="语音播报开关">
+            <button
+              type="button"
+              className={`segmented__item${voiceEnabled ? ' segmented__item--active' : ''}`}
+              aria-pressed={voiceEnabled}
+              onClick={() => {
+                if (!voiceEnabled) toggleVoice()
+              }}
+            >
+              开
+            </button>
+            <button
+              type="button"
+              className={`segmented__item${voiceEnabled ? '' : ' segmented__item--active'}`}
+              aria-pressed={!voiceEnabled}
+              onClick={() => {
+                if (voiceEnabled) toggleVoice()
+              }}
+            >
+              关
+            </button>
+          </div>
+          <label className="voice-volume">
+            <span className="voice-volume__label">音量</span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={voiceVolume}
+              disabled={!voiceEnabled}
+              onChange={(event) => setVoiceVolume(Number(event.target.value))}
+              aria-label="语音音量"
+            />
+            <span className="voice-volume__value">{Math.round(voiceVolume * 100)}%</span>
+          </label>
+          <label className="voice-volume">
+            <span className="voice-volume__label">语速</span>
+            <input
+              type="range"
+              min={1}
+              max={2}
+              step={0.05}
+              value={voiceSpeed}
+              disabled={!voiceEnabled}
+              onChange={(event) => setVoiceSpeed(Number(event.target.value))}
+              aria-label="语速倍率"
+            />
+            <span className="voice-volume__value">{voiceSpeed.toFixed(2)}×</span>
+          </label>
+          <p className="muted setup__hint">
+            吃子、将军、战法名与终局都会念；走法只报「炮二平五」这样两段，不报红黑方。
+            机机对战每步只隔 3 秒，<strong>念不完的那句会被下一手顶掉</strong> ——
+            这是故意的：欠着一堆没念完的话比漏掉一句更糟。
+          </p>
         </section>
 
         <section className="card">

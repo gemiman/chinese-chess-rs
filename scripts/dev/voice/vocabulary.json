@@ -1,0 +1,76 @@
+{
+  "voice": "zh-CN-YunjianNeural",
+  "rate": "+8%",
+  "note": "棋局语音素材词表。（「红方 / 黑方」曾经有词条，后来播报改成不报方 —— 轮到谁看棋盘和钟条就知道，报了白占一半时长。）合成用文本 ≠ 显示用文本：多音字要换成只有一个读法的同音字，否则合成器会按最常见的读法念（车念 chē、重念 zhòng）。aliases 只影响合成，不影响界面。",
+
+  "aliases": {
+    "双车错": "双驹错",
+    "重炮": "虫炮",
+    "车": "驹",
+    "卒": "足",
+    "闷": "焖",
+    "相": "象"
+  },
+
+  "clips": [
+    { "id": "keyword-eat", "text": "吃" },
+    { "id": "status-check", "text": "将军" },
+    { "id": "status-stalemate", "text": "困毙" },
+    { "id": "status-draw", "text": "和棋" },
+    { "id": "status-resign", "text": "认输" },
+    { "id": "status-timeout", "text": "超时" },
+
+    { "id": "capture-red-chariot", "text": "吃车" },
+    { "id": "capture-black-chariot", "text": "吃车" },
+    { "id": "capture-red-horse", "text": "吃马" },
+    { "id": "capture-black-horse", "text": "吃马" },
+    { "id": "capture-red-cannon", "text": "吃炮", "synth": "吃疱" },
+    { "id": "capture-black-cannon", "text": "吃炮", "synth": "吃疱" },
+    { "id": "capture-red-elephant", "text": "吃相", "synth": "吃象" },
+    { "id": "capture-black-elephant", "text": "吃象" },
+    { "id": "capture-red-advisor", "text": "吃仕", "synth": "吃士" },
+    { "id": "capture-black-advisor", "text": "吃士" },
+    { "id": "capture-red-king", "text": "吃帅" },
+    { "id": "capture-black-king", "text": "吃将", "synth": "吃匠" },
+    { "id": "capture-red-pawn", "text": "吃兵" },
+    { "id": "capture-black-pawn", "text": "吃卒" }
+  ],
+
+  "note_pieces": "走法播报靠拼接：[方] + [棋子+起点] + [动作+数]。棋子按**颜色+种类**各写一条（红车/黑车合成文本一样，生成时按合成文本去重，不会存两份）—— 这样前端拼文件名不用记「哪些字红黑同音」，去重替它兜住了。「炮」换「疱」：受控对比里「炮二」被读成 páo，「疱二」才是 pào。",
+
+  "pieces": [
+    { "id": "red-chariot", "text": "车" },
+    { "id": "black-chariot", "text": "车" },
+    { "id": "red-horse", "text": "马" },
+    { "id": "black-horse", "text": "马" },
+    { "id": "red-cannon", "text": "炮", "synth": "疱" },
+    { "id": "black-cannon", "text": "炮", "synth": "疱" },
+    { "id": "red-elephant", "text": "相", "synth": "象" },
+    { "id": "black-elephant", "text": "象" },
+    { "id": "red-advisor", "text": "仕", "synth": "士" },
+    { "id": "black-advisor", "text": "士" },
+    { "id": "red-king", "text": "帅" },
+    { "id": "black-king", "text": "将", "synth": "匠" },
+    { "id": "red-pawn", "text": "兵" },
+    { "id": "black-pawn", "text": "卒" }
+  ],
+
+  "note_qualifiers": "同一条竖线上有多个同种同色棋子时，记谱改用序数而不是路数（前车、中炮…）。这些是**前缀**，单字在前、棋子字在后，所以要和 word-* 分开生成。",
+
+  "qualifiers": [
+    { "id": "front", "text": "前" },
+    { "id": "back", "text": "后" },
+    { "id": "middle", "text": "中" }
+  ],
+
+  "note_nth": "同线 ≥4 子时中间那些用序数（二卒、三卒…）。只有兵/卒可能同线 ≥4（车马炮仕相各最多 2 个，帅 1 个），所以只给这两个生成就覆盖全了。",
+
+  "nth_pieces": ["red-pawn", "black-pawn"],
+  "nth_numerals": ["二", "三", "四", "五", "六", "七", "八"],
+
+  "numerals": ["一", "二", "三", "四", "五", "六", "七", "八", "九"],
+  "actions": ["进", "退", "平"],
+
+  "tactic_source": "assets/knowledge/tactics.json",
+  "tactic_note": "战术名从 tactics.json 直接读，不在这里抄一遍 —— 以后加战法、重跑生成就有声音了。"
+}

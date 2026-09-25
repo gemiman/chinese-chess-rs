@@ -1467,6 +1467,32 @@ body {
   font-size: 12px;
 }
 
+/* 音量条：标签在左、数值在右、滑块占满中间。 */
+.voice-volume {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--ui-text-2);
+}
+
+.voice-volume input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--state-selected);
+}
+
+.voice-volume input[type='range']:disabled {
+  opacity: 0.4;
+}
+
+.voice-volume__value {
+  min-width: 34px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .setup__start {
   display: flex;
   justify-content: center;

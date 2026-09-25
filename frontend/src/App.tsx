@@ -1,12 +1,40 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { AnalysisPage } from './pages/AnalysisPage'
 import { PlayPage } from './pages/PlayPage'
 import { SetupPage } from './pages/SetupPage'
 import { runningInTauri } from './bridge'
+import { REVEAL_MS } from './components/TacticReveal'
 import { navigate, useRoute, type Route } from './router'
+import { announce, announceTactic, silence } from './speech'
 import { useGameStore } from './store'
-import { AUTO_PACE_MS } from './types'
+import { AUTO_PACE_MS, MOVE_MS } from './types'
+
+/**
+ * 终局后最多等讲解多久（毫秒）。
+ *
+ * 讲解要跑一次搜索才出得来；认输、超时这两种终局压根没有讲解，所以这段必须有上限，
+ * 不能死等 —— 否则那两种终局跳转就永远不发生了。
+ */
+const NOTE_WAIT_MS = 3000
+
+/**
+ * 认输、超时这两种终局只留这么一点（毫秒），然后就走。
+ *
+ * 它们是**会话层**的终局，棋盘上没有一步棋，也就永远不会有讲解、不会有出场特效。
+ * 硬等着讲解是白等 —— 用户盯着一个已经结束的盘面等三秒，什么也不会发生。
+ * 留这一点只是为了让确认框收起来、画面稳一下。
+ */
+const SETTLE_MS = 400
+
+/**
+ * 特效播完之后再留一拍（毫秒）。
+ *
+ * 牌匾落下来、念完「绝杀」，再停一下才跳页 —— 否则特效刚收尾页面就换掉了，
+ * 这一局的最后一眼等于没看清。只在**确实放了特效**时留这一拍：认输、超时没有特效，
+ * 那两种终局前面已经白等了一段，再停就没意义了。
+ */
+const AFTER_REVEAL_MS = 2000
 
 /**
  * 应用外壳：决定显示哪一页，以及两个「自动跳转」。
@@ -65,6 +93,81 @@ export default function App() {
     lastMoveAt.current = steps > prev ? Date.now() : 0
   }, [steps])
 
+  // ---------------------------------------------------------------- 语音播报
+  //
+  // 播报的**内容**由 speech.ts 决定（谁先谁后、谁能插队），这里只管
+  // **什么时候**让它响。
+  const spokenSteps = useRef<number | null>(null)
+  /** 本手棋子落定的时刻。战法名比走子晚到，得等它一起落定再响。 */
+  const landAt = useRef(0)
+  /** 已经念过战法名的那一手。 */
+  const tacticPly = useRef(0)
+
+  /**
+   * 走子之后播报。
+   *
+   * ⚠️ 等 `MOVE_MS` 才响，不是收到响应就响：声音要跟**棋子落下来**对上。
+   * 动画有快/正常/慢动作三档（180 / 400 / 1000 毫秒），棋子还在半路上就开始
+   * 喊「将军」会很怪。
+   *
+   * ⚠️ 依赖只写 `steps` 和 `page`，其余从 `getState()` 现取。把整个 `state`
+   * 放进依赖会让每次快照刷新（结算超时、失败后重拉局面）都重跑一遍，而那时
+   * `steps` 没变 —— 于是走进「步数没增加」那条分支，把还没念完的播报清掉。
+   */
+  useEffect(() => {
+    if (page !== 'play') {
+      silence()
+      return
+    }
+    const previous = spokenSteps.current
+    spokenSteps.current = steps
+    const { state: snapshot, moveSpeed } = useGameStore.getState()
+    if (snapshot === null || previous === null || steps <= previous) {
+      // 换局、悔棋、复盘回到开局 —— 上一手的话没说完也别说了，
+      // 免得念的是另一盘棋的局面
+      silence()
+      tacticPly.current = 0
+      return
+    }
+    const delay = MOVE_MS[moveSpeed]
+    landAt.current = Date.now() + delay
+    const speech = snapshot.status.over ? null : snapshot.last_move
+    const timer = window.setTimeout(() => announce(speech, snapshot.status, steps), delay)
+    return () => window.clearTimeout(timer)
+  }, [steps, page])
+
+  /**
+   * 认输与超时这两种终局**没有走子**，上面那个 effect 不会触发。
+   *
+   * ⚠️ 这里刻意**不返回清理函数**。返回的话，终局之后任何一次快照刷新都会把
+   * 这个待播的定时器取消，而重进这个 effect 时去重键已经记下了 —— 终局词就
+   * 永远不出声。重复调用由 speech.ts 里的去重挡住。
+   */
+  useEffect(() => {
+    if (page !== 'play' || state === null || !state.status.over) return
+    const wait = Math.max(0, landAt.current - Date.now())
+    window.setTimeout(() => announce(state.last_move, state.status, steps), wait)
+  }, [state, steps, page])
+
+  /**
+   * 战法名要等讲解算完才到，所以单独一条，排在当场那几句后面。
+   *
+   * 只念**当前这一手**的：深度分析会把旧手数的讲解补回来，那些不该出声。
+   */
+  const notes = useGameStore((s) => s.notes)
+  useEffect(() => {
+    if (page !== 'play') return
+    const { state: snapshot } = useGameStore.getState()
+    if (snapshot === null) return
+    const ply = snapshot.history.length
+    const note = notes[ply]
+    if (note === undefined || tacticPly.current === ply) return
+    tacticPly.current = ply
+    const wait = Math.max(0, landAt.current - Date.now())
+    const timer = window.setTimeout(() => announceTactic(note, ply), wait)
+    return () => window.clearTimeout(timer)
+  }, [notes, page])
+
   // 轮到引擎时自动走一步。
   //
   // 重复触发由 store 里的 `engineInFlight` 同步守卫挡住 —— 只靠 `thinking`
@@ -108,18 +211,66 @@ export default function App() {
   const over = state?.status.over ?? false
   const wasOver = useRef(false)
   const finishAutoGame = useGameStore((s) => s.finishAutoGame)
+  const coachNote = useGameStore((s) => s.coachNote)
+
+  /**
+   * 终局后**还留在对局页**，等出场特效播完再跳分析页。
+   *
+   * # 为什么不能立刻跳
+   *
+   * 特效（「绝杀」那块牌匾）是在**讲解到达之后**才开始播的，而讲解要跑一次搜索、
+   * 比走子晚一两秒。立刻跳等于把整段特效吞掉 —— 而那正是这一局最该看的一下。
+   *
+   * # 等待分两段
+   *
+   * 1. 等讲解到：`coachNote.ply` 对上当前手数就说明是这一手的讲解。认输、超时
+   *    没有讲解，所以这段要有上限，不能死等。
+   * 2. 等特效播完：`REVEAL_MS`，与 `TacticReveal` 里那段动画同一个数（从那边导出）。
+   */
+  const [holdEnd, setHoldEnd] = useState(false)
   useEffect(() => {
     const justEnded = over && !wasOver.current
     wasOver.current = over
-    if (!justEnded) return
+    if (!over) {
+      setHoldEnd(false)
+      return
+    }
     if (mode === 'auto') {
       // 机机对战是**连播**的：跳走就等于停下来，与「别停」冲突。
       // 所以留在这儿记一笔战绩，倒计时结束后自动开下一局。
-      finishAutoGame()
-    } else {
-      navigate('analysis')
+      if (justEnded) finishAutoGame()
+      return
     }
+    if (justEnded) setHoldEnd(true)
   }, [over, mode, finishAutoGame])
+
+  // ⚠️ 依赖里放的是**手数**而不是整个 `state`：快照刷新（结算、重拉局面）会换掉
+  // `state` 的身份，那样每来一次都会把待跳的定时器重置一遍 —— 等待被无限拉长，
+  // 而且不会报错。
+  const endPly = state?.history.length ?? 0
+  const endKind = state?.status.over === true ? state.status.kind : null
+  /**
+   * 这个终局是**走出来的**吗？
+   *
+   * 只有将死 / 困毙 / 和棋是棋盘状态判出来的，也只有它们会有讲解和出场特效。
+   * 认输、超时是会话层记下的，棋盘上没有那一步 —— 见 `SETTLE_MS` 的说明。
+   */
+  const boardEnd = endKind === 'checkmate' || endKind === 'stalemate' || endKind === 'draw'
+
+  useEffect(() => {
+    if (!holdEnd || mode === 'auto') return
+    const noteReady = coachNote !== null && coachNote.ply === endPly
+    const wait = boardEnd
+      ? noteReady
+        ? REVEAL_MS + AFTER_REVEAL_MS
+        : NOTE_WAIT_MS
+      : SETTLE_MS
+    const timer = window.setTimeout(() => {
+      setHoldEnd(false)
+      navigate('analysis')
+    }, wait)
+    return () => window.clearTimeout(timer)
+  }, [holdEnd, coachNote, boardEnd, endPly, mode])
 
   // 机机对战：终局且还在连播 → 排下一局（20 秒后）。
   // 单独一段是因为「暂停后按继续」也要能重新排上，而不只是终局那一刻。
